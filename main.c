@@ -2,16 +2,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "utils.h"
+#include "server.h"
+#include "client.h"
+
+void handleWrongProgramUsage();
 
 int main(int argc, char const *argv[]) {
 
   if (argc != 2) handleWrongProgramUsage();
 
-  enum ProgramMode mode;
-  if (strcmp(argv[1], "server"))
+  if (strcmp(argv[1], "server") == 0)
     runServer();
-  else if (strcmp(argv[1], "client"))
+  else if (strcmp(argv[1], "client") == 0)
     runClient();
   else
     handleWrongProgramUsage();
@@ -21,8 +23,8 @@ int main(int argc, char const *argv[]) {
 
 void handleWrongProgramUsage() {
   printf("Program usage: ./executable <server|client>.\n");
-  printf("\tIf you want to run the server, use: './executable server'.\n");
-  printf("\tIf you want to run the client, use: './executable client'.\n");
+  printf("\tIf you want to run the server, use: './chat server'.\n");
+  printf("\tIf you want to run the client, use: './chat client'.\n");
 
   exit(EXIT_FAILURE);
 }

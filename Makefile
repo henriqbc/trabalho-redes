@@ -5,10 +5,10 @@ CC = gcc
 INCLUDE_FOLDER = include
 SOURCE_FOLDER = src
 
-BINARY = ./main
+BINARY = ./chat
 PROG = main.c
 
-SOURCES := $(shell find $(SOURCEDIR) -name '*.c')
+SOURCES := $(shell find . -name "*.c")
 OBJECTS = $(SOURCES:.c=.o)
 
 LIBRARIES_TO_LINK = -lm
@@ -20,8 +20,11 @@ VFLAGS = --show-leak-kinds=all --track-origins=yes --leak-check=full -s
 
 all: $(BINARY)
 
-run: $(BINARY)
-	$(BINARY)
+run-server: $(BINARY)
+	$(BINARY) server
+
+run-client: $(BINARY)
+	$(BINARY) client
 
 # COMPILING
 
