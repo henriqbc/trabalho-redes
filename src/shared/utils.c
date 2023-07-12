@@ -2,7 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "utils.h"
+#include "shared/utils.h"
 
 char *readString(FILE *stream, char *delimiters) {
   char *string = NULL;
