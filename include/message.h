@@ -1,6 +1,6 @@
 #pragma once
 
-#include "command.h"
+#include "operation.h"
 
 struct Message {
   char *senderNickname;
