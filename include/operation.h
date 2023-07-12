@@ -38,5 +38,5 @@ inline Operation getOperationFromCommandString(char *command) {
   else if (strcmp(command, "/whois") == 0)
     return WHOIS;
   else
-    return NULL;
+    return TEXT;
 }
