@@ -143,3 +143,8 @@ void binarioNaTela(char *nomeArquivoBinario) {
   free(mb);
   fclose(fs);
 }
+
+void assignString(char *destination, char *source) {
+  destination = malloc(strLen(source) * sizeof(char));
+  strcpy(destination, source);
+}
