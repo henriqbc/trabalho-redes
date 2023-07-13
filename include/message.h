@@ -2,11 +2,11 @@
 
 #include "operation.h"
 
-struct Message {
+typedef struct Message {
   char *senderNickname;
   Operation operation;
   char *content;
-} typedef Message;
+} Message;
 
 Message *createMessage(char *senderNickname, Operation operation, char *content);
 
