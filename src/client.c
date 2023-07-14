@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 
 #include "client.h"
@@ -6,18 +7,18 @@
 #include "shared/status.h"
 #include "shared/utils.h"
 
-int serverSocket = NULL;
+int serverSocket = 0;
 char *userNickname = NULL;
 
-STATUS handleUserCommand(const char *userNickname, const char *command, const char *commandArg);
+STATUS handleUserCommand(char *userNickname, char *command, char *commandArg);
 STATUS handleServerMessage(Message *message);
-void updateUserNickname(const char *newNickname);
+void updateUserNickname(char *newNickname);
 
 void runClient() {
   printf("Client running.\n");
 }
 
-STATUS handleUserCommand(const char *userNickname, const char *command, const char *commandArg) {
+STATUS handleUserCommand(char *userNickname, char *command, char *commandArg) {
   Operation operation = getOperationFromCommandString(command);
 
   Message *request = createClientMessageFromOperation(operation, userNickname, command, commandArg);
@@ -54,9 +55,11 @@ STATUS handleServerMessage(Message *message) {
     default:
       return STATUS_ERROR;
   }
+
+  return STATUS_ERROR;
 }
 
-void updateUserNickname(const char *newNickname) {
+void updateUserNickname(char *newNickname) {
   free(userNickname);
   assignString(userNickname, newNickname);
 }
