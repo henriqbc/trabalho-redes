@@ -4,6 +4,7 @@
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 3000
 #define MAX_CONNECTED_CLIENTS 20
+#define MAX_CONNECTION_QUEUE 20
 
 // Gets server ip on sockaddr_in format from defined string SERVER_IP (server.h).
 struct sockaddr_in get_server_sockaddr();
@@ -12,6 +13,6 @@ struct sockaddr_in get_server_sockaddr();
 int: socket file description (socket id). */
 int create_server();
 
-void set_server_to_listening_mode(int server_socket);
+void start_server(int server_socket);
 
 void shutdown_server(int server_socket);
