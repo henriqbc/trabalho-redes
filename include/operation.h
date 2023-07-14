@@ -3,6 +3,8 @@
 #include "string.h"
 
 enum Operation {
+  INVALID_OPERATION,
+
   TEXT,
   CONNECT,
   QUIT,
@@ -36,6 +38,8 @@ inline Operation get_operation_from_command_string(char *command) {
     return UNMUTE;
   else if (strcmp(command, "/whois") == 0)
     return WHOIS;
+  else if (command[0] == '/')
+    return INVALID_OPERATION;
   else
     return TEXT;
 }
