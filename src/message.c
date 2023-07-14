@@ -28,23 +28,6 @@ void deleteMessage(Message *message) {
 }
 
 Message *createClientMessageFromOperation(Operation operation, char *senderNickname, char *command, char *commandArg) {
-  char *content;
-  switch (operation) {
-    case TEXT:
-      assignString(content, command);
-      break;
-    case CONNECT:
-      break;
-    case QUIT:
-      break;
-    case PING:
-      break;
-    default:
-      return NULL;
-  }
-
-  Message *message = createMessage(senderNickname, operation, content);
-  free(content);
-
+  Message *message = createMessage(senderNickname, operation, operation == TEXT ? command : commandArg);
   return message;
 }
