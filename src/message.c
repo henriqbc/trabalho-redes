@@ -10,6 +10,7 @@ Message *create_message(char *senderNickname, Operation operation, char *content
 
   Message *message = malloc(sizeof(Message));
 
+  message->senderNickname = NULL;
   assignString(message->senderNickname, senderNickname);
   message->operation = operation;
   assignString(message->content, content);
