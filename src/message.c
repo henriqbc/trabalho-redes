@@ -6,7 +6,7 @@
 #include "shared/status.h"
 #include "shared/constants.h"
 
-Message *createMessage(char *senderNickname, Operation operation, char *content) {
+Message *create_message(char *senderNickname, Operation operation, char *content) {
 
   Message *message = malloc(sizeof(Message));
 
@@ -20,14 +20,14 @@ Message *createMessage(char *senderNickname, Operation operation, char *content)
   return message;
 }
 
-void deleteMessage(Message *message) {
+void delete_message(Message *message) {
   free(message->senderNickname);
   free(message->content);
 
   free(message);
 }
 
-Message *createClientMessageFromOperation(Operation operation, char *senderNickname, char *command, char *commandArg) {
-  Message *message = createMessage(senderNickname, operation, operation == TEXT ? command : commandArg);
+Message *create_client_message_from_operation(Operation operation, char *senderNickname, char *command, char *commandArg) {
+  Message *message = create_message(senderNickname, operation, operation == TEXT ? command : commandArg);
   return message;
 }

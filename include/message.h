@@ -8,8 +8,8 @@ typedef struct Message {
   char *content;
 } Message;
 
-Message *createMessage(char *senderNickname, Operation operation, char *content);
+Message *create_message(char *senderNickname, Operation operation, char *content);
 
-void deleteMessage(Message *message);
+void delete_message(Message *message);
 
-Message *createClientMessageFromOperation(Operation operation, char *senderNickname, char *command, char *commandArg);
+Message *create_client_message_from_operation(Operation operation, char *senderNickname, char *command, char *commandArg);

@@ -17,7 +17,7 @@ enum Operation {
   WHOIS,
 } typedef Operation;
 
-inline Operation getOperationFromCommandString(char *command) {
+inline Operation get_operation_from_command_string(char *command) {
   if (strcmp(command, "/connect") == 0)
     return CONNECT;
   else if (strcmp(command, "/quit") == 0)

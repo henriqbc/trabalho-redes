@@ -16,12 +16,12 @@ int serverSocket = 0;
 char *userNickname = NULL;
 bool clientRunning = true;
 
-STATUS handleUserCommand(char *userNickname, char *command, char *commandArg);
-STATUS handleServerMessage(Message *message);
-void updateUserNickname(char *newNickname);
+STATUS handle_user_command(char *userNickname, char *command, char *commandArg);
+STATUS handle_server_message(Message *message);
+void update_user_nickname(char *newNickname);
 
-void sendMessageLoop();
-void receiveMessageLoop();
+void send_message_loop();
+void receive_message_loop();
 
 void run_client() {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -41,37 +41,36 @@ void run_client() {
   printf("Client succesfully connected and running.\n");
 }
 
-
 void shutdown_client(int client_socket) { close(client_socket); }
 
 // essa vai ser a função que vai rodar na thread de enviar coisas
-void sendMessageLoop() {
+void send_message_loop() {
   while (clientRunning) {
     // pega o que o usuário escreveu
 
     // parseia em command e commandArg
 
-    // taca no handleUserCommand
+    // taca no handle_user_command
 
     // lida com o status do handle userCommand
   }
 }
 
 // essa vai ser a função que vai rodar na thread de receber coisas
-void receiveMessageLoop() {
+void receive_message_loop() {
   while (clientRunning) {
     // espera algo do server
 
-    // taca no handleServerMessage
+    // taca no handle_server_message
 
     // lida com o status
   }
 }
 
-STATUS handleUserCommand(char *userNickname, char *command, char *commandArg) {
-  Operation operation = getOperationFromCommandString(command);
+STATUS handle_user_command(char *userNickname, char *command, char *commandArg) {
+  Operation operation = get_operation_from_command_string(command);
 
-  Message *request = createClientMessageFromOperation(operation, userNickname, command, commandArg);
+  Message *request = create_client_message_from_operation(operation, userNickname, command, commandArg);
 
   if (operation == CONNECT) {
     // TODO precisa implementar esse cara aqui
@@ -81,19 +80,19 @@ STATUS handleUserCommand(char *userNickname, char *command, char *commandArg) {
       return STATUS_FAILURE_CREATING_SOCKET;
     }
   } else if (operation == NICKNAME) {
-    updateUserNickname(commandArg);
+    update_user_nickname(commandArg);
   } else if (operation == QUIT) {
     return quit();
   }
 
-  sendMessage(serverSocket, request);
+  send_message(serverSocket, request);
 
-  deleteMessage(request);
+  delete_message(request);
   return STATUS_SUCCESS;
 }
 
 // vai ser responsabilidade desse cara printar as mensagens na tela
-STATUS handleServerMessage(Message *message) {
+STATUS handle_server_message(Message *message) {
   switch (message->operation) {
     case TEXT:
       break;
@@ -110,7 +109,7 @@ STATUS handleServerMessage(Message *message) {
   return STATUS_ERROR;
 }
 
-void updateUserNickname(char *newNickname) {
+void update_user_nickname(char *newNickname) {
   free(userNickname);
   assignString(userNickname, newNickname);
 }
