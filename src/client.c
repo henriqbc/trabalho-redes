@@ -21,11 +21,11 @@ void update_user_nickname(char *newNickname);
 int connect_to_server();
 void quit();
 
-STATUS handle_user_command(char *command, char *commandArg);
+STATUS handle_user_command(char *command, char *command_arg);
 STATUS handle_server_message(Message *message);
 
-void send_message_loop();
-void receive_message_loop();
+void *send_message_loop();
+void *receive_message_loop();
 
 void run_client() {
   pthread_t send_message_thread, receive_message_thread;
@@ -40,7 +40,7 @@ void run_client() {
 void shutdown_client(int client_socket) { close(client_socket); }
 
 // essa vai ser a função que vai rodar na thread de enviar coisas
-void send_message_loop() {
+void *send_message_loop() {
   while (client_running) {
     char *user_input = readString(stdin, "\n");
 
@@ -58,11 +58,14 @@ void send_message_loop() {
     free(command_arg);
 
     // lida com o status do handle userCommand
+    printf("%d", status);
   }
+
+  return NULL;
 }
 
 // essa vai ser a função que vai rodar na thread de receber coisas
-void receive_message_loop() {
+void *receive_message_loop() {
   while (client_running) {
     // espera algo do server
 
@@ -70,26 +73,28 @@ void receive_message_loop() {
 
     // lida com o status
   }
+
+  return NULL;
 }
 
-STATUS handle_user_command(char *command, char *commandArg) {
+STATUS handle_user_command(char *command, char *command_arg) {
   Operation operation = get_operation_from_command_string(command);
 
   if (operation == INVALID_OPERATION) return STATUS_INVALID_COMMAND;
 
-  Message *request = create_client_message_from_operation(operation, user_nickname, command, commandArg);
+  Message *request = create_client_message_from_operation(operation, user_nickname, command, command_arg);
 
   if (operation == CONNECT) {
     server_socket = connect_to_server();
   } else if (operation == NICKNAME) {
-    update_user_nickname(commandArg);
+    update_user_nickname(command_arg);
   } else if (operation == QUIT) {
     delete_message(request);
     quit();
     return STATUS_SUCCESS;
   }
 
-  send_message(server_socket, request);
+  // send_message(server_socket, request);
 
   delete_message(request);
   return STATUS_SUCCESS;
