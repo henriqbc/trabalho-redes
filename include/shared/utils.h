@@ -81,3 +81,12 @@ void revertString(char *str);
  * @param nomeArquivoBinario The binary file to be printed
  */
 void binarioNaTela(char *nomeArquivoBinario);
+
+/**
+ * @brief Helper function used to copy values from source to destination.
+ * Although similar to strcpy, this function also allocates memory to the desired destination.
+ *
+ * @param destination
+ * @param source
+ */
+void assignString(char *destination, char *source);

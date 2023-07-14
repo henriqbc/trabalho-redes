@@ -2,7 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "utils.h"
+#include "shared/utils.h"
 
 char *readString(FILE *stream, char *delimiters) {
   char *string = NULL;
@@ -142,4 +142,9 @@ void binarioNaTela(char *nomeArquivoBinario) {
   printf("%lf\n", (cs / (double)100));
   free(mb);
   fclose(fs);
+}
+
+void assignString(char *destination, char *source) {
+  destination = malloc(strLen(source) * sizeof(char));
+  strcpy(destination, source);
 }
