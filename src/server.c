@@ -3,6 +3,8 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <signal.h>
+#include <sys/time.h>
 
 #include "server.h"
 
@@ -38,7 +40,7 @@ int create_server() {
     return -1;
   }
 
-  if (listen(sockfd, MAX_CONNECTED_CLIENTS) == -1) {
+  if (listen(sockfd, MAX_CONNECTION_QUEUE) == -1) {
     printf("Error while waiting for connections (listening). Shutting down.\n");
     shutdown_server(sockfd);
     return -1;
@@ -49,6 +51,24 @@ int create_server() {
   return sockfd;
 }
 
-void set_server_to_listening_mode(int server_socket) { return; }
+void signal_callback_handler(int server_socket) {
+  printf("Shutting down server.");
+  shutdown_server(server_socket);
+
+  exit(0);
+}
+
+void start_server(int server_socket) {
+  signal(server_socket, signal_callback_handler);
+
+  int client_sockets[MAX_CONNECTED_CLIENTS];
+  for (int i = 0; i < MAX_CONNECTED_CLIENTS; i++) client_sockets[i] = 0;
+
+  while (1) {
+    // algo aqui
+  }
+
+  return;
+}
 
 void shutdown_server(int server_socket) { close(server_socket); }

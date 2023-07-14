@@ -12,7 +12,7 @@ int main(int argc, char const *argv[]) {
   if (argc != 2) handleWrongProgramUsage();
 
   if (strcmp(argv[1], "server") == 0)
-    set_server_to_listening_mode(create_server());
+    start_server(create_server());
   else if (strcmp(argv[1], "client") == 0)
     run_client();
   else
