@@ -18,7 +18,6 @@ enum Operation {
 } typedef Operation;
 
 inline Operation getOperationFromCommandString(char *command) {
-
   if (strcmp(command, "/connect") == 0)
     return CONNECT;
   else if (strcmp(command, "/quit") == 0)
