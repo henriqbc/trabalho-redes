@@ -1,3 +1,4 @@
 #pragma once
 
-void runClient();
+void run_client();
+void shutdown_client(int client_socket);
