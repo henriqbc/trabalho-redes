@@ -13,7 +13,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-typedef unsigned char byte;
+typedef char byte;
 
 /**
  * @brief Reads a string from a specified stream until find the separator or EOF, allocates

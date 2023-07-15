@@ -93,5 +93,5 @@ Message *deserialize_message(byte *serialized_message) {
 }
 
 void send_message(int socket, Message *message) {
-  byte buffer[MAX_PACKET_SIZE];
+  // byte buffer[MAX_PACKET_SIZE];
 }
