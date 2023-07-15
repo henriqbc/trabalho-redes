@@ -32,12 +32,28 @@ void delete_message(Message *message) {
   free(message);
 }
 
+SerializedMessage *create_serialized_message(byte *buffer, int buffer_size) {
+  SerializedMessage *serialized_message = malloc(sizeof(SerializedMessage));
+
+  serialized_message->buffer = NULL;
+  assignString(serialized_message->buffer, buffer);
+  serialized_message->buffer_size = buffer_size;
+
+  return serialized_message;
+}
+
+void delete_serialized_message(SerializedMessage *serialized_message) {
+  free(serialized_message->buffer);
+
+  free(serialized_message);
+}
+
 Message *create_client_message_from_operation(Operation operation, char *sender_nickname, char *command, char *commandArg) {
   Message *message = create_message(sender_nickname, operation, operation == TEXT ? command : commandArg);
   return message;
 }
 
-byte *serialize_message(Message *message) {
+SerializedMessage *serialize_message(Message *message) {
   byte *buffer = NULL;
   int buffer_size = 0;
 
@@ -67,21 +83,24 @@ byte *serialize_message(Message *message) {
   buffer_size += content_size + 1;
   buffer[buffer_size - 1] = MESSAGE_SERIALIZATION_SEPARATOR;
 
-  return buffer;
+  SerializedMessage *serialized_message = create_serialized_message(buffer, buffer_size);
+  free(buffer);
+
+  return serialize_message;
 }
 
-Message *deserialize_message(byte *serialized_message) {
+Message *deserialize_message(SerializedMessage *serialized_message) {
 
   int cursor = 0;
 
-  char *sender_nickname = substringUntil(serialized_message, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
+  char *sender_nickname = substringUntil(serialized_message->buffer, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
   cursor += strlen(sender_nickname) + 1;
 
   Operation *operation = (Operation *)substringUntil(
-      serialized_message + cursor, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
+      serialized_message->buffer + cursor, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
   cursor += sizeof(Operation) + 1;
 
-  char *content = substringUntil(serialized_message + cursor, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
+  char *content = substringUntil(serialized_message->buffer + cursor, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
 
   Message *message = create_message(sender_nickname, *operation, content);
 
@@ -93,5 +112,5 @@ Message *deserialize_message(byte *serialized_message) {
 }
 
 void send_message(int socket, Message *message) {
-  // byte buffer[MAX_PACKET_SIZE];
+  byte buffer[MAX_PACKET_SIZE];
 }
