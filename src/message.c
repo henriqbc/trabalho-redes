@@ -120,11 +120,11 @@ void send_message(int socket, Message *message) {
 
   int cursor = 0;
   while (cursor <= serialized_message->buffer_size) {
-    int sent_packet_size = min(MAX_PACKET_SIZE, serialized_message->buffer_size - cursor);
+    int packet_size = min(MAX_PACKET_SIZE, serialized_message->buffer_size - cursor);
 
-    write(socket, serialized_message->buffer + cursor, sent_packet_size);
+    write(socket, serialized_message->buffer + cursor, packet_size);
 
-    cursor += sent_packet_size;
+    cursor += packet_size;
   }
 
   delete_serialized_message(serialized_message);
