@@ -15,6 +15,11 @@
 
 typedef char byte;
 
+#define min(a, b) \
+  ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
 /**
  * @brief Reads a string from a specified stream until find the separator or EOF, allocates
  * memory for it and returns its pointer.
