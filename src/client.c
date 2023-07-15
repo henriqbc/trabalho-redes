@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <pthread.h>
 
 #include "server.h"
 #include "client.h"
@@ -16,35 +17,30 @@ int server_socket;
 char *user_nickname = NULL;
 bool client_running = true;
 
-STATUS handle_user_command(char *command, char *commandArg);
-STATUS handle_server_message(Message *message);
 void update_user_nickname(char *newNickname);
+int connect_to_server();
+void quit();
 
-void send_message_loop();
-void receive_message_loop();
+STATUS handle_user_command(char *command, char *command_arg);
+STATUS handle_server_message(Message *message);
+
+void *send_message_loop();
+void *receive_message_loop();
 
 void run_client() {
-  int server_socket = socket(AF_INET, SOCK_STREAM, 0);
-  if (server_socket == -1) {
-    printf("Error starting client socket. Shutting down.\n");
-    return;
-  }
+  pthread_t send_message_thread, receive_message_thread;
 
-  const struct sockaddr_in SERVER_ADDRESS = get_server_sockaddr();
+  pthread_create(&send_message_thread, NULL, send_message_loop, NULL);
+  pthread_create(&receive_message_thread, NULL, receive_message_loop, NULL);
 
-  if (connect(server_socket, (struct sockaddr *)&SERVER_ADDRESS, sizeof(SERVER_ADDRESS)) == -1) {
-    printf("Error connecting to the server. Shutting down.\n");
-    shutdown_client(server_socket);
-    return;
-  }
-
-  printf("Client succesfully connected and running.\n");
+  pthread_join(send_message_thread, NULL);
+  pthread_join(receive_message_thread, NULL);
 }
 
 void shutdown_client(int client_socket) { close(client_socket); }
 
 // essa vai ser a função que vai rodar na thread de enviar coisas
-void send_message_loop() {
+void *send_message_loop() {
   while (client_running) {
     char *user_input = readString(stdin, "\n");
 
@@ -62,11 +58,14 @@ void send_message_loop() {
     free(command_arg);
 
     // lida com o status do handle userCommand
+    printf("%d", status);
   }
+
+  return NULL;
 }
 
 // essa vai ser a função que vai rodar na thread de receber coisas
-void receive_message_loop() {
+void *receive_message_loop() {
   while (client_running) {
     // espera algo do server
 
@@ -74,29 +73,28 @@ void receive_message_loop() {
 
     // lida com o status
   }
+
+  return NULL;
 }
 
-STATUS handle_user_command(char *command, char *commandArg) {
+STATUS handle_user_command(char *command, char *command_arg) {
   Operation operation = get_operation_from_command_string(command);
 
   if (operation == INVALID_OPERATION) return STATUS_INVALID_COMMAND;
 
-  Message *request = create_client_message_from_operation(operation, user_nickname, command, commandArg);
+  Message *request = create_client_message_from_operation(operation, user_nickname, command, command_arg);
 
   if (operation == CONNECT) {
-    // TODO precisa implementar esse cara aqui
-    // to pensando em int connnectToServer(const char *ip, int port)
-    // server_socket = connectToServer(ip, port);
-    if (server_socket < 0) {
-      return STATUS_FAILURE_CREATING_SOCKET;
-    }
+    server_socket = connect_to_server();
   } else if (operation == NICKNAME) {
-    update_user_nickname(commandArg);
+    update_user_nickname(command_arg);
   } else if (operation == QUIT) {
-    return quit();
+    delete_message(request);
+    quit();
+    return STATUS_SUCCESS;
   }
 
-  send_message(server_socket, request);
+  // send_message(server_socket, request);
 
   delete_message(request);
   return STATUS_SUCCESS;
@@ -123,4 +121,29 @@ STATUS handle_server_message(Message *message) {
 void update_user_nickname(char *newNickname) {
   free(user_nickname);
   assignString(user_nickname, newNickname);
+}
+
+int connect_to_server() {
+  int new_socket = socket(AF_INET, SOCK_STREAM, 0);
+  if (new_socket == -1) {
+    printf("Error starting client socket. Shutting down.\n");
+    return new_socket;
+  }
+
+  const struct sockaddr_in SERVER_ADDRESS = get_server_sockaddr();
+
+  if (connect(new_socket, (struct sockaddr *)&SERVER_ADDRESS, sizeof(SERVER_ADDRESS)) == -1) {
+    printf("Error connecting to the server. Shutting down.\n");
+    shutdown_client(new_socket);
+    return new_socket;
+  }
+
+  printf("Client succesfully connected and running.\n");
+
+  return new_socket;
+}
+
+void quit() {
+  client_running = false;
+  shutdown_client(server_socket);
 }
