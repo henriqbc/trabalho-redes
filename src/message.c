@@ -6,29 +6,92 @@
 #include "shared/status.h"
 #include "shared/constants.h"
 
-Message *create_message(char *senderNickname, Operation operation, char *content) {
+#define MESSAGE_SERIALIZATION_SEPARATOR '|'
+#define MESSAGE_SERIALIZATION_SEPARATOR_STRING "|"
+#define MAX_PACKET_SIZE 4096
+
+Message *create_message(char *sender_nickname, Operation operation, char *content) {
 
   Message *message = malloc(sizeof(Message));
 
-  message->senderNickname = NULL;
-  assignString(message->senderNickname, senderNickname);
+  message->sender_nickname = NULL;
+  assignString(message->sender_nickname, sender_nickname);
   message->operation = operation;
   assignString(message->content, content);
 
-  message->senderNickname = senderNickname;
+  message->sender_nickname = sender_nickname;
   message->content = content;
 
   return message;
 }
 
 void delete_message(Message *message) {
-  free(message->senderNickname);
+  free(message->sender_nickname);
   free(message->content);
 
   free(message);
 }
 
-Message *create_client_message_from_operation(Operation operation, char *senderNickname, char *command, char *commandArg) {
-  Message *message = create_message(senderNickname, operation, operation == TEXT ? command : commandArg);
+Message *create_client_message_from_operation(Operation operation, char *sender_nickname, char *command, char *commandArg) {
+  Message *message = create_message(sender_nickname, operation, operation == TEXT ? command : commandArg);
   return message;
+}
+
+byte *serialize_message(Message *message) {
+  byte *buffer = NULL;
+  int buffer_size = 0;
+
+  // SENDER NICKNAME
+  int sender_nickname_size = strlen(message->sender_nickname);
+  buffer = realloc(buffer, sender_nickname_size + 1);
+  memcpy(buffer, message->sender_nickname, sender_nickname_size);
+
+  // add separator
+  buffer_size += sender_nickname_size + 1;
+  buffer[buffer_size - 1] = MESSAGE_SERIALIZATION_SEPARATOR;
+
+  // OPERATION
+  buffer = realloc(buffer, buffer_size + sizeof(Operation) + 1);
+  memcpy(buffer + buffer_size, &message->operation, sizeof(Operation));
+
+  // add separator
+  buffer_size += sizeof(Operation) + 1;
+  buffer[buffer_size - 1] = MESSAGE_SERIALIZATION_SEPARATOR;
+
+  // CONTENT
+  int content_size = strlen(message->content);
+  buffer = realloc(buffer, buffer_size + content_size + 1);
+  memcpy(buffer + buffer_size, message->content, content_size);
+
+  // add separator
+  buffer_size += content_size + 1;
+  buffer[buffer_size - 1] = MESSAGE_SERIALIZATION_SEPARATOR;
+
+  return buffer;
+}
+
+Message *deserialize_message(byte *serialized_message) {
+
+  int cursor = 0;
+
+  char *sender_nickname = substringUntil(serialized_message, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
+  cursor += strlen(sender_nickname) + 1;
+
+  Operation *operation = (Operation *)substringUntil(
+      serialized_message + cursor, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
+  cursor += sizeof(Operation) + 1;
+
+  char *content = substringUntil(serialized_message + cursor, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
+
+  Message *message = create_message(sender_nickname, *operation, content);
+
+  free(sender_nickname);
+  free(operation);
+  free(content);
+
+  return message;
+}
+
+void send_message(int socket, Message *message) {
+  byte buffer[MAX_PACKET_SIZE];
 }
