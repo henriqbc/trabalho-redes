@@ -82,7 +82,8 @@ STATUS handle_user_command(char *command, char *command_arg) {
 
   if (operation == INVALID_OPERATION) return STATUS_INVALID_COMMAND;
 
-  Message *request = create_client_message_from_operation(operation, user_nickname, command, command_arg);
+  Message *request =
+      create_client_message_from_operation(operation, user_nickname, command, command_arg);
 
   if (operation == CONNECT) {
     server_socket = connect_to_server();
