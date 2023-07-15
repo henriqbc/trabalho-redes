@@ -86,7 +86,7 @@ SerializedMessage *serialize_message(Message *message) {
   SerializedMessage *serialized_message = create_serialized_message(buffer, buffer_size);
   free(buffer);
 
-  return serialize_message;
+  return serialized_message;
 }
 
 Message *deserialize_message(SerializedMessage *serialized_message) {
@@ -112,5 +112,5 @@ Message *deserialize_message(SerializedMessage *serialized_message) {
 }
 
 void send_message(int socket, Message *message) {
-  byte buffer[MAX_PACKET_SIZE];
+  // byte buffer[MAX_PACKET_SIZE];
 }

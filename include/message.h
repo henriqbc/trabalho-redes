@@ -1,5 +1,6 @@
 #pragma once
 
+#include "shared/utils.h"
 #include "operation.h"
 
 typedef struct Message {
