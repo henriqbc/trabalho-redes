@@ -13,7 +13,7 @@ OBJECTS = $(SOURCES:.c=.o)
 
 LIBRARIES_TO_LINK = -lpthread
 
-FLAGS = -g
+FLAGS = -g -Wall
 VFLAGS = --show-leak-kinds=all --track-origins=yes --leak-check=full -s
 
 # ------------------------------------------------------------------------------

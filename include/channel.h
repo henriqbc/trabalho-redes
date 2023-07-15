@@ -6,5 +6,5 @@
 typedef struct Channel {
   char *name;
   int members_qty;
-  User *muted;
+  User *members;
 } Channel;
