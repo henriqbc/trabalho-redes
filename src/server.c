@@ -106,6 +106,65 @@ Server *build_broadcast_server_config(User *all_connections, int connections_qty
   return broadcast_server;
 }
 
+void kick_user_from_broadcast(char *nickname, Server *server) {
+  User *new_connections = malloc(sizeof(User) * (server->connections_qty - 1));
+  int copy_index = 0;
+  for (int i = 0; i < server->connections_qty; i++) {
+    if (strcmp(server->all_connections[i].nickname, nickname) != 0)
+      new_connections[copy_index++] = server->all_connections[i];
+  }
+
+  free(server->all_connections);
+  server->all_connections = new_connections;
+}
+
+void kick_user_from_channel(char *nickname, char *channel_name, Server *server) {
+
+  for (int i = 0; i < server->channels_qty; i++) {
+    if (strcmp(server->channels[i].name, nickname) == 0) {
+      Channel target_channel = server->channels[i];
+      User *updated_members = malloc(sizeof(User) * (target_channel.members_qty - 1));
+      int copy_index = 0;
+
+      for (int j = 0; j < target_channel.members_qty; j++)
+        if (strcmp(server->all_connections[i].nickname, nickname) != 0)
+          updated_members[copy_index++] = target_channel.members[j];
+
+      server->channels[i].members = updated_members;
+    }
+  }
+}
+
+void create_channel(Channel channel, Server *server) {
+  server->channels_qty++;
+  server->channels = realloc(server->channels, sizeof(Channel) * server->channels_qty);
+  server->channels[server->channels_qty - 1] = channel;
+}
+
+void kill_channel(char *channel_name, Server *server) {
+  Channel *new_channels = malloc(sizeof(Channel) * (server->channels_qty - 1));
+  int copy_index = 0;
+  for (int i = 0; i < server->channels_qty; i++) {
+    if (strcmp(server->channels[i].name, channel_name) != 0) {
+      new_channels[copy_index++] = server->channels[i];
+    } else {
+      for (int j = 0; j < server->channels[i].members_qty; j++)
+        kick_user_from_broadcast(server->channels[i].members[j].nickname, server);
+    }
+  }
+
+  free(server->channels);
+  server->channels = new_channels;
+}
+
+void add_user_to_broadcast(User user, Server *server);
+void add_user_to_channel(User user, char *channel_name, Server *server);
+void move_user_through_channels(User user, char *current_channel_name, char *new_channel_name,
+                                Server *server);
+
+void mute_user(User user, Server *server);
+void unmute_user(User user, char *channel_name, Server *server);
+
 void delete_server_config(Server *server) {
   free(server->all_connections);
   free(server->channels);

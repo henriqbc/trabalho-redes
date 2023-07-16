@@ -27,6 +27,22 @@ int create_server();
 Server *build_channel_server_config(Channel *channels, int channels_qty);
 Server *build_broadcast_server_config(User *all_connections, int connections_qty);
 
+void create_channel(Channel channel, Server *server);
+void kill_channel(char *name, Server *server);
+
+void add_user_to_broadcast(User user, Server *server);
+void add_user_to_channel(User user, char *channel_name, Server *server);
+void move_user_through_channels(User user, char *current_channel_name, char *new_channel_name,
+                                Server *server);
+
+void is_nickname_already_taken(char *nickname, Server *server);
+
+void kick_user_from_broadcast(char *nickname, Server *server);
+void kick_user_from_channel(char *nickname, char *channel_name, Server *server);
+
+void mute_user(User user, Server *server);
+void unmute_user(User user, char *channel_name, Server *server);
+
 void delete_server_config(Server *server);
 
 void set_server_to_listening_mode(int server_socket);
