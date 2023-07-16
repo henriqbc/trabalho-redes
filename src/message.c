@@ -139,7 +139,7 @@ Message *receive_message(int socket) {
   int bytes_read = read(socket, buffer, MAX_PACKET_SIZE);  // works fine if message is smaller than MAX_PACKET_SIZE
 
   if (bytes_read < 4) {
-    printf('Received message not long enough.\n');
+    printf("Received message not long enough.\n");
     return NULL;
   }
 
