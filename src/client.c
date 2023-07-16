@@ -90,7 +90,7 @@ STATUS handle_user_command(char *command, char *command_arg) {
   Message *request =
       create_client_message_from_operation(operation, user_nickname, command, command_arg);
 
-  if (operation == JOIN) {
+  if (operation == CONNECT) {
     server_socket = connect_to_server();
   } else if (operation == NICKNAME) {
     update_user_nickname(command_arg);
@@ -103,7 +103,7 @@ STATUS handle_user_command(char *command, char *command_arg) {
   if (server_socket != -1)
     send_message(server_socket, request);
   else
-    printf("You must first connect to the server using '/join <channel>'.\n");
+    printf("You must first connect to the server using '/connect'.\n");
 
   delete_message(request);
   return STATUS_SUCCESS;
