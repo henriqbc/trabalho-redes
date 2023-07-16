@@ -67,10 +67,10 @@ void *send_message_loop() {
 // essa vai ser a função que vai rodar na thread de receber coisas
 void *receive_message_loop() {
   while (client_running) {
-    // espera algo do server
+    if (server_socket == -1) continue;
+
     Message *message = receive_message(server_socket);
 
-    // taca no handle_server_message
     STATUS status = handle_server_message(message);
 
     delete_message(message);
