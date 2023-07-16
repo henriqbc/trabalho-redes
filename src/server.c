@@ -25,7 +25,8 @@ int create_server() {
     return -1;
   }
 
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, NULL, 0) == -1) {
+  int opt = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
     printf("Error setting server socket option. Shutting down.\n");
     shutdown_server(sockfd);
     return -1;
