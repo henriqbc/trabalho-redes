@@ -13,7 +13,7 @@
 #include "shared/status.h"
 #include "shared/utils.h"
 
-int server_socket;
+int server_socket = -1;
 char *user_nickname = NULL;
 bool client_running = true;
 
@@ -68,10 +68,15 @@ void *send_message_loop() {
 void *receive_message_loop() {
   while (client_running) {
     // espera algo do server
+    Message *message = receive_message(server_socket);
 
     // taca no handle_server_message
+    STATUS status = handle_server_message(message);
+
+    delete_message(message);
 
     // lida com o status
+    printf("%d", status);
   }
 
   return NULL;
@@ -85,7 +90,7 @@ STATUS handle_user_command(char *command, char *command_arg) {
   Message *request =
       create_client_message_from_operation(operation, user_nickname, command, command_arg);
 
-  if (operation == CONNECT) {
+  if (operation == JOIN) {
     server_socket = connect_to_server();
   } else if (operation == NICKNAME) {
     update_user_nickname(command_arg);
@@ -95,13 +100,15 @@ STATUS handle_user_command(char *command, char *command_arg) {
     return STATUS_SUCCESS;
   }
 
-  // send_message(server_socket, request);
+  if (server_socket != -1)
+    send_message(server_socket, request);
+  else
+    printf("You must first connect to the server using '/join <channel>'.\n");
 
   delete_message(request);
   return STATUS_SUCCESS;
 }
 
-// vai ser responsabilidade desse cara printar as mensagens na tela
 STATUS handle_server_message(Message *message) {
   switch (message->operation) {
     case TEXT:

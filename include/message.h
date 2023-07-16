@@ -29,3 +29,5 @@ SerializedMessage *serialize_message(Message *message);
 Message *deserialize_message(SerializedMessage *serialized_message);
 
 void send_message(int socket, Message *message);
+
+Message *receive_message(int socket);
