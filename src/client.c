@@ -17,6 +17,7 @@ int server_socket = -1;
 char *user_nickname = NULL;
 bool client_running = true;
 
+void define_user_nickname();
 void update_user_nickname(char *newNickname);
 int connect_to_server();
 void quit();
@@ -28,6 +29,8 @@ void *send_message_loop();
 void *receive_message_loop();
 
 void run_client() {
+  define_user_nickname();
+
   pthread_t send_message_thread, receive_message_thread;
 
   pthread_create(&send_message_thread, NULL, send_message_loop, NULL);
@@ -39,7 +42,6 @@ void run_client() {
 
 void shutdown_client(int client_socket) { close(client_socket); }
 
-// essa vai ser a função que vai rodar na thread de enviar coisas
 void *send_message_loop() {
   while (client_running) {
     char *user_input = readString(stdin, "\n");
@@ -62,7 +64,6 @@ void *send_message_loop() {
   return NULL;
 }
 
-// essa vai ser a função que vai rodar na thread de receber coisas
 void *receive_message_loop() {
   while (client_running) {
     if (server_socket == -1) continue;
@@ -113,29 +114,25 @@ STATUS handle_server_message(Message *message) {
     case PING:
       printf("Pong!\n");
       break;
-    JOIN:
+    case JOIN:
       printf("Succesfuly joined the channel!\n");
       break;
-    CHANNEL_NOT_FOUND:
+    case CHANNEL_NOT_FOUND:
       printf("Channel not found.\n");
       break;
-    NICKNAME:
+    case NICKNAME:
       update_user_nickname(message->content);
       printf("Succesfuly updated your nickname to %s!\n", message->content);
       break;
-    NICKNAME_ALREADY_TAKEN:
+    case NICKNAME_ALREADY_TAKEN:
       update_user_nickname(message->content);
       printf("The nickname is currently unavailable, please choose another one.\n");
       break;
-    KICK:
+    case KICK:
       printf("Unfortunately, you were kicked from this channel by the administrator.\n");
       quit();
       break;
-    MUTE:
-      break;
-    UNMUTE:
-      break;
-    WHOIS:
+    case WHOIS:
       printf("The desired ip is: %s\n.", message->content);
       break;
     default:
@@ -143,6 +140,11 @@ STATUS handle_server_message(Message *message) {
   }
 
   return STATUS_ERROR;
+}
+
+void define_user_nickname() {
+  printf("Enter your nickname: ");
+  user_nickname = readString(stdin, "\n");
 }
 
 void update_user_nickname(char *newNickname) {
