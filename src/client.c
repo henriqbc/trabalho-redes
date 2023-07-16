@@ -45,7 +45,9 @@ void *send_message_loop() {
     char *user_input = readString(stdin, "\n");
 
     char *command = substringUntil(user_input, " \n");
-    char *command_arg = substringUntil(user_input + strlen(command), "\n");
+    char *command_arg = strlen(user_input) != strlen(command)
+                            ? substringUntil(user_input + strlen(command), "\n")
+                            : NULL;
 
     STATUS status;
     if (user_input[0] != '/')
@@ -153,5 +155,6 @@ int connect_to_server() {
 
 void quit() {
   client_running = false;
-  shutdown_client(server_socket);
+  if (server_socket != -1)
+    shutdown_client(server_socket);
 }
