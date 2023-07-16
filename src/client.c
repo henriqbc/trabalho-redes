@@ -68,10 +68,15 @@ void *send_message_loop() {
 void *receive_message_loop() {
   while (client_running) {
     // espera algo do server
+    Message *message = receive_message(server_socket);
 
     // taca no handle_server_message
+    STATUS status = handle_server_message(message);
+
+    delete_message(message);
 
     // lida com o status
+    printf("%d", status);
   }
 
   return NULL;
@@ -104,7 +109,6 @@ STATUS handle_user_command(char *command, char *command_arg) {
   return STATUS_SUCCESS;
 }
 
-// vai ser responsabilidade desse cara printar as mensagens na tela
 STATUS handle_server_message(Message *message) {
   switch (message->operation) {
     case TEXT:
