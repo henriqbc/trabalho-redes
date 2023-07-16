@@ -16,12 +16,9 @@ Message *create_message(char *sender_nickname, Operation operation, char *conten
   Message *message = malloc(sizeof(Message));
 
   message->sender_nickname = NULL;
-  assignString(message->sender_nickname, sender_nickname);
+  assignString(&(message->sender_nickname), sender_nickname);
   message->operation = operation;
-  assignString(message->content, content);
-
-  message->sender_nickname = sender_nickname;
-  message->content = content;
+  assignString(&(message->content), content);
 
   return message;
 }
@@ -37,7 +34,7 @@ SerializedMessage *create_serialized_message(byte *buffer, int buffer_size) {
   SerializedMessage *serialized_message = malloc(sizeof(SerializedMessage));
 
   serialized_message->buffer = NULL;
-  assignString(serialized_message->buffer, buffer);
+  memcpy(serialized_message->buffer, buffer, buffer_size);
   serialized_message->buffer_size = buffer_size;
 
   return serialized_message;

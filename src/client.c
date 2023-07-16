@@ -128,7 +128,7 @@ STATUS handle_server_message(Message *message) {
 
 void update_user_nickname(char *newNickname) {
   free(user_nickname);
-  assignString(user_nickname, newNickname);
+  assignString(&user_nickname, newNickname);
 }
 
 int connect_to_server() {
