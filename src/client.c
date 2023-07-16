@@ -51,7 +51,10 @@ void run_client() {
   pthread_join(receive_message_thread, NULL);
 }
 
-void shutdown_client(int client_socket) { close(client_socket); }
+void shutdown_client(int client_socket) {
+  shutdown(client_socket, SHUT_RDWR);
+  close(client_socket);
+}
 
 void *send_message_loop() {
   while (client_running) {
@@ -80,6 +83,7 @@ void *receive_message_loop() {
     if (server_socket == -1) continue;
 
     Message *message = receive_message(server_socket);
+    if (!message) continue;
 
     handle_server_message(message);
 
@@ -99,6 +103,15 @@ STATUS handle_user_command(char *command, char *command_arg) {
 
   if (operation == CONNECT) {
     server_socket = connect_to_server();
+
+    if (server_socket == -1) {
+      printf("Error connecting to the server.\n");
+      delete_message(request);
+      return STATUS_ERROR;
+    }
+
+    printf("Client succesfully connected and running.\n");
+
   } else if (operation == QUIT) {
     delete_message(request);
     quit();
@@ -117,34 +130,33 @@ STATUS handle_user_command(char *command, char *command_arg) {
 STATUS handle_server_message(Message *message) {
   switch (message->operation) {
     case TEXT:
-      printf("%s: %s\n", message->sender_nickname, message->content);
+      printf("\n%s: %s\n\n", message->sender_nickname, message->content);
       break;
     case CONNECT:
-      printf("Succesfully connected to the server!\n");
+      printf("\nSuccesfully connected to the server!\n\n");
       break;
     case PING:
-      printf("Pong!\n");
+      printf("\nPong!\n\n");
       break;
     case JOIN:
-      printf("Succesfuly joined the channel!\n");
+      printf("\nSuccesfuly joined the channel!\n\n");
       break;
     case CHANNEL_NOT_FOUND:
-      printf("Channel not found.\n");
+      printf("\nChannel not found.\n\n");
       break;
     case NICKNAME:
       update_user_nickname(message->content);
-      printf("Succesfuly updated your nickname to %s!\n", message->content);
+      printf("\nSuccesfuly updated your nickname to %s!\n\n", message->content);
       break;
     case NICKNAME_ALREADY_TAKEN:
       update_user_nickname(message->content);
-      printf("The nickname is currently unavailable, please choose another one.\n");
+      printf("\nThe nickname is currently unavailable, please choose another one.\n\n");
       break;
     case KICK:
-      printf("Unfortunately, you were kicked from this channel by the administrator.\n");
-      quit();
+      printf("\nUnfortunately, you were kicked from this channel by the administrator.\n\n");
       break;
     case WHOIS:
-      printf("The desired ip is: %s\n.", message->content);
+      printf("\nThe desired ip is: %s\n\n.", message->content);
       break;
     default:
       return STATUS_ERROR;
@@ -166,19 +178,15 @@ void update_user_nickname(char *newNickname) {
 int connect_to_server() {
   int new_socket = socket(AF_INET, SOCK_STREAM, 0);
   if (new_socket == -1) {
-    printf("Error starting client socket. Shutting down.\n");
-    return new_socket;
+    return -1;
   }
 
   const struct sockaddr_in SERVER_ADDRESS = get_server_sockaddr();
 
   if (connect(new_socket, (struct sockaddr *)&SERVER_ADDRESS, sizeof(SERVER_ADDRESS)) == -1) {
-    printf("Error connecting to the server. Shutting down.\n");
     shutdown_client(new_socket);
-    return new_socket;
+    return -1;
   }
-
-  printf("Client succesfully connected and running.\n");
 
   return new_socket;
 }
@@ -208,5 +216,7 @@ void sigint_handler() {
 void define_sigint_handler() {
   struct sigaction act;
   act.sa_handler = sigint_handler;
+  act.sa_mask = (__sigset_t){.__val = 0};
+  act.sa_flags = 0;
   sigaction(SIGINT, &act, NULL);
 }
