@@ -48,8 +48,11 @@ link $(BINARY): $(OBJECTS) $(PROG:.c=.o)
 
 # UTILS
 
-val: all
-	valgrind $(VFLAGS) $(BINARY)
+val-server: all
+	valgrind $(VFLAGS) $(BINARY) server
+
+val-client: all
+	valgrind $(VFLAGS) $(BINARY) client
 
 zip:
 	zip -r $(PROJECT_NAME).zip $(PROG) $(INCLUDE_FOLDER) $(SOURCE_FOLDER) Makefile
