@@ -96,4 +96,4 @@ void binarioNaTela(char *nomeArquivoBinario);
  * @param destination
  * @param source
  */
-void assignString(char *destination, char *source);
+void assignString(char **destination, char *source);

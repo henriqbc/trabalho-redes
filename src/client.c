@@ -17,6 +17,9 @@ int server_socket = -1;
 char *user_nickname = NULL;
 bool client_running = true;
 
+void define_user_nickname();
+void print_greetings_message();
+
 void update_user_nickname(char *newNickname);
 int connect_to_server();
 void quit();
@@ -28,6 +31,10 @@ void *send_message_loop();
 void *receive_message_loop();
 
 void run_client() {
+  define_user_nickname();
+
+  print_greetings_message();
+
   pthread_t send_message_thread, receive_message_thread;
 
   pthread_create(&send_message_thread, NULL, send_message_loop, NULL);
@@ -39,44 +46,37 @@ void run_client() {
 
 void shutdown_client(int client_socket) { close(client_socket); }
 
-// essa vai ser a função que vai rodar na thread de enviar coisas
 void *send_message_loop() {
   while (client_running) {
     char *user_input = readString(stdin, "\n");
 
     char *command = substringUntil(user_input, " \n");
-    char *command_arg = substringUntil(user_input + strlen(command), "\n");
+    char *command_arg = strlen(user_input) != strlen(command)
+                            ? substringUntil(user_input + strlen(command), "\n")
+                            : NULL;
 
-    STATUS status;
     if (user_input[0] != '/')
-      status = handle_user_command(user_input, NULL);
+      handle_user_command(user_input, NULL);
     else
-      status = handle_user_command(command, command_arg);
+      handle_user_command(command, command_arg);
 
     free(user_input);
     free(command);
     free(command_arg);
-
-    // lida com o status do handle userCommand
-    printf("%d", status);
   }
 
   return NULL;
 }
 
-// essa vai ser a função que vai rodar na thread de receber coisas
 void *receive_message_loop() {
   while (client_running) {
-    // espera algo do server
+    if (server_socket == -1) continue;
+
     Message *message = receive_message(server_socket);
 
-    // taca no handle_server_message
-    STATUS status = handle_server_message(message);
+    handle_server_message(message);
 
     delete_message(message);
-
-    // lida com o status
-    printf("%d", status);
   }
 
   return NULL;
@@ -92,8 +92,6 @@ STATUS handle_user_command(char *command, char *command_arg) {
 
   if (operation == CONNECT) {
     server_socket = connect_to_server();
-  } else if (operation == NICKNAME) {
-    update_user_nickname(command_arg);
   } else if (operation == QUIT) {
     delete_message(request);
     quit();
@@ -112,12 +110,34 @@ STATUS handle_user_command(char *command, char *command_arg) {
 STATUS handle_server_message(Message *message) {
   switch (message->operation) {
     case TEXT:
+      printf("%s: %s\n", message->sender_nickname, message->content);
       break;
     case CONNECT:
-      break;
-    case QUIT:
+      printf("Succesfully connected to the server!\n");
       break;
     case PING:
+      printf("Pong!\n");
+      break;
+    case JOIN:
+      printf("Succesfuly joined the channel!\n");
+      break;
+    case CHANNEL_NOT_FOUND:
+      printf("Channel not found.\n");
+      break;
+    case NICKNAME:
+      update_user_nickname(message->content);
+      printf("Succesfuly updated your nickname to %s!\n", message->content);
+      break;
+    case NICKNAME_ALREADY_TAKEN:
+      update_user_nickname(message->content);
+      printf("The nickname is currently unavailable, please choose another one.\n");
+      break;
+    case KICK:
+      printf("Unfortunately, you were kicked from this channel by the administrator.\n");
+      quit();
+      break;
+    case WHOIS:
+      printf("The desired ip is: %s\n.", message->content);
       break;
     default:
       return STATUS_ERROR;
@@ -126,9 +146,14 @@ STATUS handle_server_message(Message *message) {
   return STATUS_ERROR;
 }
 
+void define_user_nickname() {
+  printf("Enter your nickname: ");
+  user_nickname = readString(stdin, "\n");
+}
+
 void update_user_nickname(char *newNickname) {
   free(user_nickname);
-  assignString(user_nickname, newNickname);
+  assignString(&user_nickname, newNickname);
 }
 
 int connect_to_server() {
@@ -153,5 +178,18 @@ int connect_to_server() {
 
 void quit() {
   client_running = false;
-  shutdown_client(server_socket);
+
+  free(user_nickname);
+
+  if (server_socket != -1)
+    shutdown_client(server_socket);
+}
+
+void print_greetings_message() {
+  printf("\n");
+  printf("Connect to the server with '/connect'.\n");
+  printf("Join a channel with '/join <channel name>'.\n");
+  printf("Change your nickname with '/nickname <new nickname>'.\n");
+  printf("Quit the program with '/quit'.\n");
+  printf("\n");
 }
