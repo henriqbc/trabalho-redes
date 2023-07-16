@@ -1,3 +1,6 @@
+// https://stackoverflow.com/questions/6491019/struct-sigaction-incomplete-error
+#define _XOPEN_SOURCE 700
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -5,6 +8,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include "server.h"
 #include "client.h"
@@ -17,6 +21,7 @@ int server_socket = -1;
 char *user_nickname = NULL;
 bool client_running = true;
 
+void define_sigint_handler();
 void define_user_nickname();
 void print_greetings_message();
 
@@ -31,6 +36,8 @@ void *send_message_loop();
 void *receive_message_loop();
 
 void run_client() {
+  define_sigint_handler();
+
   define_user_nickname();
 
   print_greetings_message();
@@ -192,4 +199,14 @@ void print_greetings_message() {
   printf("Change your nickname with '/nickname <new nickname>'.\n");
   printf("Quit the program with '/quit'.\n");
   printf("\n");
+}
+
+void sigint_handler() {
+  printf("\nTo exit the application, use '/quit'.\n\n");
+}
+
+void define_sigint_handler() {
+  struct sigaction act;
+  act.sa_handler = sigint_handler;
+  sigaction(SIGINT, &act, NULL);
 }
