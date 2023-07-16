@@ -94,7 +94,18 @@ void *receive_message_loop() {
 }
 
 STATUS handle_user_command(char *command, char *command_arg) {
-  Operation operation = get_operation_from_command_string(command);
+  Operation operation;
+  if (strcmp(command, "/connect") == 0)       operation = CONNECT;
+  else if (strcmp(command, "/quit") == 0)     operation = QUIT;
+  else if (strcmp(command, "/ping") == 0)     operation = PING;
+  else if (strcmp(command, "/join") == 0)     operation = JOIN;
+  else if (strcmp(command, "/nickname") == 0) operation = NICKNAME;
+  else if (strcmp(command, "/kick") == 0)     operation = KICK;
+  else if (strcmp(command, "/mute") == 0)     operation = MUTE;
+  else if (strcmp(command, "/unmute") == 0)   operation = UNMUTE;
+  else if (strcmp(command, "/whois") == 0)    operation = WHOIS;
+  else if (command[0] == '/')                 operation = INVALID_OPERATION;
+  else return TEXT;
 
   if (operation == INVALID_OPERATION) return STATUS_INVALID_COMMAND;
 
