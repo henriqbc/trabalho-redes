@@ -80,6 +80,7 @@ void *receive_message_loop() {
     if (server_socket == -1) continue;
 
     Message *message = receive_message(server_socket);
+    if (!message) continue;
 
     handle_server_message(message);
 
@@ -99,6 +100,13 @@ STATUS handle_user_command(char *command, char *command_arg) {
 
   if (operation == CONNECT) {
     server_socket = connect_to_server();
+
+    if (server_socket == -1) {
+      delete_message(request);
+      quit();
+      return STATUS_SUCCESS;
+    }
+
   } else if (operation == QUIT) {
     delete_message(request);
     quit();
@@ -167,7 +175,7 @@ int connect_to_server() {
   int new_socket = socket(AF_INET, SOCK_STREAM, 0);
   if (new_socket == -1) {
     printf("Error starting client socket. Shutting down.\n");
-    return new_socket;
+    return -1;
   }
 
   const struct sockaddr_in SERVER_ADDRESS = get_server_sockaddr();
@@ -175,7 +183,7 @@ int connect_to_server() {
   if (connect(new_socket, (struct sockaddr *)&SERVER_ADDRESS, sizeof(SERVER_ADDRESS)) == -1) {
     printf("Error connecting to the server. Shutting down.\n");
     shutdown_client(new_socket);
-    return new_socket;
+    return -1;
   }
 
   printf("Client succesfully connected and running.\n");

@@ -24,6 +24,7 @@ Message *create_message(char *sender_nickname, Operation operation, char *conten
 }
 
 void delete_message(Message *message) {
+
   free(message->sender_nickname);
   free(message->content);
 
@@ -118,8 +119,7 @@ void send_message(int socket, Message *message) {
   SerializedMessage *serialized_message = serialize_message(message);
 
   int cursor = 0;
-  printf("buffer size: %d\n", serialized_message->buffer_size);
-  while (cursor <= serialized_message->buffer_size) {
+  while (cursor < serialized_message->buffer_size) {
     int packet_size = min(MAX_PACKET_SIZE, serialized_message->buffer_size - cursor);
 
     write(socket, serialized_message->buffer + cursor, packet_size);
@@ -138,8 +138,13 @@ Message *receive_message(int socket) {
   // read first guaranteed packet
   int bytes_read = read(socket, buffer, MAX_PACKET_SIZE);  // works fine if message is smaller than MAX_PACKET_SIZE
 
-  if (bytes_read < 4) {
+  if (bytes_read < 0) {
+    printf("Failed to receive data from the server.\n");
+    free(buffer);
+    return NULL;
+  } else if (bytes_read < 4) {
     printf("Received message not long enough.\n");
+    free(buffer);
     return NULL;
   }
 
