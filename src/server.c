@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -157,13 +158,67 @@ void kill_channel(char *channel_name, Server *server) {
   server->channels = new_channels;
 }
 
-void add_user_to_broadcast(User user, Server *server);
-void add_user_to_channel(User user, char *channel_name, Server *server);
-void move_user_through_channels(User user, char *current_channel_name, char *new_channel_name,
-                                Server *server);
+bool is_nickname_already_taken(char *nickname, Server *server) {
+  for (int i = 0; i < server->connections_qty; i++)
+    if (strcmp(server->all_connections[i].nickname, nickname) == 0) return true;
+  return false;
+}
 
-void mute_user(User user, Server *server);
-void unmute_user(User user, char *channel_name, Server *server);
+bool channel_exists(char *channel_name, Server *server) {
+  for (int i = 0; i < server->connections_qty; i++)
+    if (strcmp(server->channels[i].name, channel_name) == 0) return true;
+  return false;
+}
+
+void add_user_to_broadcast(User user, Server *server) {
+  server->connections_qty++;
+  server->all_connections =
+      realloc(server->all_connections, sizeof(User) * (server->connections_qty));
+
+  server->all_connections[server->connections_qty - 1] = user;
+}
+
+void add_user_to_channel(User user, char *channel_name, Server *server) {
+  for (int i = 0; i < server->channels_qty; i++) {
+    Channel current_channel = server->channels[i];
+    if (strcmp(current_channel.name, channel_name) == 0) {
+      current_channel.members_qty++;
+      current_channel.members =
+          realloc(current_channel.members, sizeof(User) * current_channel.members_qty);
+      current_channel.members[current_channel.members_qty - 1] = user;
+
+      return;
+    }
+  }
+}
+
+void move_user_through_channels(User user, char *current_channel_name, char *new_channel_name,
+                                Server *server) {
+  kick_user_from_channel(user.nickname, current_channel_name, server);
+  add_user_to_channel(user, new_channel_name, server);
+}
+
+void mute_user(char *nickname, char *channel_name, Server *server) {
+  for (int i = 0; i < server->channels_qty; i++) {
+    Channel current_channel = server->channels[i];
+    if (strcmp(current_channel.name, channel_name) == 0)
+      for (int j = 0; j < current_channel.members_qty; j++) {
+        if (strcmp(current_channel.members[j].nickname, nickname) == 0)
+          current_channel.members[j].muted = true;
+      }
+  }
+}
+
+void unmute_user(char *nickname, char *channel_name, Server *server) {
+  for (int i = 0; i < server->channels_qty; i++) {
+    Channel current_channel = server->channels[i];
+    if (strcmp(current_channel.name, channel_name) == 0)
+      for (int j = 0; j < current_channel.members_qty; j++) {
+        if (strcmp(current_channel.members[j].nickname, nickname) == 0)
+          current_channel.members[j].muted = false;
+      }
+  }
+}
 
 void delete_server_config(Server *server) {
   free(server->all_connections);
