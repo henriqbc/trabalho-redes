@@ -18,6 +18,8 @@ char *user_nickname = NULL;
 bool client_running = true;
 
 void define_user_nickname();
+void print_greetings_message();
+
 void update_user_nickname(char *newNickname);
 int connect_to_server();
 void quit();
@@ -30,6 +32,8 @@ void *receive_message_loop();
 
 void run_client() {
   define_user_nickname();
+
+  print_greetings_message();
 
   pthread_t send_message_thread, receive_message_thread;
 
@@ -179,4 +183,13 @@ void quit() {
 
   if (server_socket != -1)
     shutdown_client(server_socket);
+}
+
+void print_greetings_message() {
+  printf("\n");
+  printf("Connect to the server with '/connect'.\n");
+  printf("Join a channel with '/join <channel name>'.\n");
+  printf("Change your nickname with '/nickname <new nickname>'.\n");
+  printf("Quit the program with '/quit'.\n");
+  printf("\n");
 }
