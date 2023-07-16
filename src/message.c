@@ -33,7 +33,7 @@ void delete_message(Message *message) {
 SerializedMessage *create_serialized_message(byte *buffer, int buffer_size) {
   SerializedMessage *serialized_message = malloc(sizeof(SerializedMessage));
 
-  serialized_message->buffer = NULL;
+  serialized_message->buffer = malloc(buffer_size);
   memcpy(serialized_message->buffer, buffer, buffer_size);
   serialized_message->buffer_size = buffer_size;
 
@@ -58,9 +58,9 @@ SerializedMessage *serialize_message(Message *message) {
   byte *buffer = malloc(buffer_size);
 
   // SENDER NICKNAME
-  int sender_nickname_size = strlen(message->sender_nickname);
-  buffer = realloc(buffer, sender_nickname_size + 1);
-  memcpy(buffer, message->sender_nickname, sender_nickname_size);
+  int sender_nickname_size = message->sender_nickname != NULL ? strlen(message->sender_nickname) : 0;
+  buffer = realloc(buffer, buffer_size + sender_nickname_size + 1);
+  memcpy(buffer + buffer_size, message->sender_nickname, sender_nickname_size);
 
   // add separator
   buffer_size += sender_nickname_size + 1;
@@ -75,7 +75,7 @@ SerializedMessage *serialize_message(Message *message) {
   buffer[buffer_size - 1] = MESSAGE_SERIALIZATION_SEPARATOR;
 
   // CONTENT
-  int content_size = strlen(message->content);
+  int content_size = message->content != NULL ? strlen(message->content) : 0;
   buffer = realloc(buffer, buffer_size + content_size + 1);
   memcpy(buffer + buffer_size, message->content, content_size);
 
@@ -118,6 +118,7 @@ void send_message(int socket, Message *message) {
   SerializedMessage *serialized_message = serialize_message(message);
 
   int cursor = 0;
+  printf("buffer size: %d\n", serialized_message->buffer_size);
   while (cursor <= serialized_message->buffer_size) {
     int packet_size = min(MAX_PACKET_SIZE, serialized_message->buffer_size - cursor);
 
