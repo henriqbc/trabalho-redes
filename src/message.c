@@ -49,7 +49,9 @@ void delete_serialized_message(SerializedMessage *serialized_message) {
   free(serialized_message);
 }
 
-Message *create_client_message_from_operation(Operation operation, char *sender_nickname, char *command, char *commandArg) {
+Message *create_client_message_from_operation(
+    Operation operation, char *sender_nickname, char *command, char *commandArg) {
+
   Message *message = create_message(sender_nickname, operation, operation == TEXT ? command : commandArg);
   return message;
 }
