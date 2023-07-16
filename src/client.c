@@ -1,9 +1,14 @@
+// https://stackoverflow.com/questions/6491019/struct-sigaction-incomplete-error
+#define _XOPEN_SOURCE 700
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <pthread.h>
+#include <signal.h>
 
 #include "server.h"
 #include "client.h"
@@ -12,96 +17,157 @@
 #include "shared/status.h"
 #include "shared/utils.h"
 
-int serverSocket = 0;
-char *userNickname = NULL;
-bool clientRunning = true;
+int server_socket = -1;
+char *user_nickname = NULL;
+bool client_running = true;
 
-STATUS handleUserCommand(char *userNickname, char *command, char *commandArg);
-STATUS handleServerMessage(Message *message);
-void updateUserNickname(char *newNickname);
+void define_sigint_handler();
+void define_user_nickname();
+void print_greetings_message();
 
-void sendMessageLoop();
-void receiveMessageLoop();
+void update_user_nickname(char *newNickname);
+int connect_to_server();
+void quit();
+
+STATUS handle_user_command(char *command, char *command_arg);
+STATUS handle_server_message(Message *message);
+
+void *send_message_loop();
+void *receive_message_loop();
 
 void run_client() {
-  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd == -1) {
-    printf("Error starting client socket. Shutting down.\n");
-    return;
-  }
+  define_sigint_handler();
 
-  const struct sockaddr_in SERVER_ADDRESS = get_server_sockaddr();
+  define_user_nickname();
 
-  if (connect(sockfd, (struct sockaddr *)&SERVER_ADDRESS, sizeof(SERVER_ADDRESS)) == -1) {
-    printf("Error connecting to the server. Shutting down.\n");
-    shutdown_client(sockfd);
-    return;
-  }
+  print_greetings_message();
 
-  printf("Client succesfully connected and running.\n");
+  pthread_t send_message_thread, receive_message_thread;
+
+  pthread_create(&send_message_thread, NULL, send_message_loop, NULL);
+  pthread_create(&receive_message_thread, NULL, receive_message_loop, NULL);
+
+  pthread_join(send_message_thread, NULL);
+  pthread_join(receive_message_thread, NULL);
 }
 
-
-void shutdown_client(int client_socket) { close(client_socket); }
-
-// essa vai ser a função que vai rodar na thread de enviar coisas
-void sendMessageLoop() {
-  while (clientRunning) {
-    // pega o que o usuário escreveu
-
-    // parseia em command e commandArg
-
-    // taca no handleUserCommand
-
-    // lida com o status do handle userCommand
-  }
+void shutdown_client(int client_socket) {
+  shutdown(client_socket, SHUT_RDWR);
+  close(client_socket);
 }
 
-// essa vai ser a função que vai rodar na thread de receber coisas
-void receiveMessageLoop() {
-  while (clientRunning) {
-    // espera algo do server
+void *send_message_loop() {
+  while (client_running) {
+    char *user_input = readString(stdin, "\n");
 
-    // taca no handleServerMessage
+    char *command = substringUntil(user_input, " \n");
+    char *command_arg = strlen(user_input) != strlen(command)
+                            ? substringUntil(user_input + strlen(command), "\n")
+                            : NULL;
 
-    // lida com o status
+    if (user_input[0] != '/')
+      handle_user_command(user_input, NULL);
+    else
+      handle_user_command(command, command_arg);
+
+    free(user_input);
+    free(command);
+    free(command_arg);
   }
+
+  return NULL;
 }
 
-STATUS handleUserCommand(char *userNickname, char *command, char *commandArg) {
-  Operation operation = getOperationFromCommandString(command);
+void *receive_message_loop() {
+  while (client_running) {
+    if (server_socket == -1) continue;
 
-  Message *request = createClientMessageFromOperation(operation, userNickname, command, commandArg);
+    Message *message = receive_message(server_socket);
+    if (!message) continue;
+
+    handle_server_message(message);
+
+    delete_message(message);
+  }
+
+  return NULL;
+}
+
+STATUS handle_user_command(char *command, char *command_arg) {
+  Operation operation;
+  if (strcmp(command, "/connect") == 0)       operation = CONNECT;
+  else if (strcmp(command, "/quit") == 0)     operation = QUIT;
+  else if (strcmp(command, "/ping") == 0)     operation = PING;
+  else if (strcmp(command, "/join") == 0)     operation = JOIN;
+  else if (strcmp(command, "/nickname") == 0) operation = NICKNAME;
+  else if (strcmp(command, "/kick") == 0)     operation = KICK;
+  else if (strcmp(command, "/mute") == 0)     operation = MUTE;
+  else if (strcmp(command, "/unmute") == 0)   operation = UNMUTE;
+  else if (strcmp(command, "/whois") == 0)    operation = WHOIS;
+  else if (command[0] == '/')                 operation = INVALID_OPERATION;
+  else return TEXT;
+
+  if (operation == INVALID_OPERATION) return STATUS_INVALID_COMMAND;
+
+  Message *request =
+      create_client_message_from_operation(operation, user_nickname, command, command_arg);
 
   if (operation == CONNECT) {
-    // TODO precisa implementar esse cara aqui
-    // to pensando em int connnectToServer(const char *ip, int port)
-    // serverSocket = connectToServer(ip, port);
-    if (serverSocket < 0) {
-      return STATUS_FAILURE_CREATING_SOCKET;
+    server_socket = connect_to_server();
+
+    if (server_socket == -1) {
+      printf("Error connecting to the server.\n");
+      delete_message(request);
+      return STATUS_ERROR;
     }
-  } else if (operation == NICKNAME) {
-    updateUserNickname(commandArg);
+
+    printf("Client succesfully connected and running.\n");
+
   } else if (operation == QUIT) {
-    return quit();
+    delete_message(request);
+    quit();
+    return STATUS_SUCCESS;
   }
 
-  sendMessage(serverSocket, request);
+  if (server_socket != -1)
+    send_message(server_socket, request);
+  else
+    printf("You must first connect to the server using '/connect'.\n");
 
-  deleteMessage(request);
+  delete_message(request);
   return STATUS_SUCCESS;
 }
 
-// vai ser responsabilidade desse cara printar as mensagens na tela
-STATUS handleServerMessage(Message *message) {
+STATUS handle_server_message(Message *message) {
   switch (message->operation) {
     case TEXT:
+      printf("\n%s: %s\n\n", message->sender_nickname, message->content);
       break;
     case CONNECT:
-      break;
-    case QUIT:
+      printf("\nSuccesfully connected to the server!\n\n");
       break;
     case PING:
+      printf("\nPong!\n\n");
+      break;
+    case JOIN:
+      printf("\nSuccesfuly joined the channel!\n\n");
+      break;
+    case CHANNEL_NOT_FOUND:
+      printf("\nChannel not found.\n\n");
+      break;
+    case NICKNAME:
+      update_user_nickname(message->content);
+      printf("\nSuccesfuly updated your nickname to %s!\n\n", message->content);
+      break;
+    case NICKNAME_ALREADY_TAKEN:
+      update_user_nickname(message->content);
+      printf("\nThe nickname is currently unavailable, please choose another one.\n\n");
+      break;
+    case KICK:
+      printf("\nUnfortunately, you were kicked from this channel by the administrator.\n\n");
+      break;
+    case WHOIS:
+      printf("\nThe desired ip is: %s\n\n.", message->content);
       break;
     default:
       return STATUS_ERROR;
@@ -110,7 +176,58 @@ STATUS handleServerMessage(Message *message) {
   return STATUS_ERROR;
 }
 
-void updateUserNickname(char *newNickname) {
-  free(userNickname);
-  assignString(userNickname, newNickname);
+void define_user_nickname() {
+  printf("Enter your nickname: ");
+  user_nickname = readString(stdin, "\n");
+}
+
+void update_user_nickname(char *newNickname) {
+  free(user_nickname);
+  assignString(&user_nickname, newNickname);
+}
+
+int connect_to_server() {
+  int new_socket = socket(AF_INET, SOCK_STREAM, 0);
+  if (new_socket == -1) {
+    return -1;
+  }
+
+  const struct sockaddr_in SERVER_ADDRESS = get_server_sockaddr();
+
+  if (connect(new_socket, (struct sockaddr *)&SERVER_ADDRESS, sizeof(SERVER_ADDRESS)) == -1) {
+    shutdown_client(new_socket);
+    return -1;
+  }
+
+  return new_socket;
+}
+
+void quit() {
+  client_running = false;
+
+  free(user_nickname);
+
+  if (server_socket != -1)
+    shutdown_client(server_socket);
+}
+
+void print_greetings_message() {
+  printf("\n");
+  printf("Connect to the server with '/connect'.\n");
+  printf("Join a channel with '/join <channel name>'.\n");
+  printf("Change your nickname with '/nickname <new nickname>'.\n");
+  printf("Quit the program with '/quit'.\n");
+  printf("\n");
+}
+
+void sigint_handler() {
+  printf("\nTo exit the application, use '/quit'.\n\n");
+}
+
+void define_sigint_handler() {
+  struct sigaction act;
+  act.sa_handler = sigint_handler;
+  act.sa_mask = (__sigset_t){.__val = 0};
+  act.sa_flags = 0;
+  sigaction(SIGINT, &act, NULL);
 }
