@@ -11,6 +11,7 @@ enum Operation {
   PING,
 
   JOIN,
+  CHANNEL_NOT_FOUND,
   NICKNAME,
   NICKNAME_ALREADY_TAKEN,
   KICK,

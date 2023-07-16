@@ -49,18 +49,14 @@ void *send_message_loop() {
                             ? substringUntil(user_input + strlen(command), "\n")
                             : NULL;
 
-    STATUS status;
     if (user_input[0] != '/')
-      status = handle_user_command(user_input, NULL);
+      handle_user_command(user_input, NULL);
     else
-      status = handle_user_command(command, command_arg);
+      handle_user_command(command, command_arg);
 
     free(user_input);
     free(command);
     free(command_arg);
-
-    // lida com o status do handle userCommand
-    printf("%d", status);
   }
 
   return NULL;
@@ -73,12 +69,9 @@ void *receive_message_loop() {
 
     Message *message = receive_message(server_socket);
 
-    STATUS status = handle_server_message(message);
+    handle_server_message(message);
 
     delete_message(message);
-
-    // lida com o status
-    printf("%d", status);
   }
 
   return NULL;
@@ -94,8 +87,6 @@ STATUS handle_user_command(char *command, char *command_arg) {
 
   if (operation == CONNECT) {
     server_socket = connect_to_server();
-  } else if (operation == NICKNAME) {
-    update_user_nickname(command_arg);
   } else if (operation == QUIT) {
     delete_message(request);
     quit();
@@ -114,12 +105,38 @@ STATUS handle_user_command(char *command, char *command_arg) {
 STATUS handle_server_message(Message *message) {
   switch (message->operation) {
     case TEXT:
+      printf("%s: %s\n", message->sender_nickname, message->content);
       break;
     case CONNECT:
-      break;
-    case QUIT:
+      printf("Succesfully connected to the server!\n");
       break;
     case PING:
+      printf("Pong!\n");
+      break;
+    JOIN:
+      printf("Succesfuly joined the channel!\n");
+      break;
+    CHANNEL_NOT_FOUND:
+      printf("Channel not found.\n");
+      break;
+    NICKNAME:
+      update_user_nickname(message->content);
+      printf("Succesfuly updated your nickname to %s!\n", message->content);
+      break;
+    NICKNAME_ALREADY_TAKEN:
+      update_user_nickname(message->content);
+      printf("The nickname is currently unavailable, please choose another one.\n");
+      break;
+    KICK:
+      printf("Unfortunately, you were kicked from this channel by the administrator.\n");
+      quit();
+      break;
+    MUTE:
+      break;
+    UNMUTE:
+      break;
+    WHOIS:
+      printf("The desired ip is: %s\n.", message->content);
       break;
     default:
       return STATUS_ERROR;
@@ -155,6 +172,9 @@ int connect_to_server() {
 
 void quit() {
   client_running = false;
+
+  free(user_nickname);
+
   if (server_socket != -1)
     shutdown_client(server_socket);
 }
