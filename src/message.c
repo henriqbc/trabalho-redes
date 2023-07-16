@@ -84,6 +84,11 @@ SerializedMessage *serialize_message(Message *message) {
   buffer_size += content_size + 1;
   buffer[buffer_size - 1] = MESSAGE_SERIALIZATION_SEPARATOR;
 
+  // add final '\0' to indicate end of message
+  buffer_size++;
+  buffer = realloc(buffer, buffer_size);
+  buffer[buffer_size - 1] = '\0';
+
   // add buffer_size header
   memcpy(buffer, &buffer_size, sizeof(int));
 
@@ -138,12 +143,7 @@ Message *receive_message(int socket) {
   // read first guaranteed packet
   int bytes_read = read(socket, buffer, MAX_PACKET_SIZE);  // works fine if message is smaller than MAX_PACKET_SIZE
 
-  if (bytes_read < 0) {
-    printf("Failed to receive data from the server.\n");
-    free(buffer);
-    return NULL;
-  } else if (bytes_read < 4) {
-    printf("Received message not long enough.\n");
+  if (bytes_read < 4) {
     free(buffer);
     return NULL;
   }
