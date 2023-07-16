@@ -7,6 +7,8 @@
 #include <arpa/inet.h>
 
 #include "server.h"
+#include "message.h"
+#include "operation.h"
 
 struct sockaddr_in get_server_sockaddr() {
   struct sockaddr_in server_address;
@@ -26,7 +28,8 @@ int create_server() {
     return -1;
   }
 
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, NULL, 0) == -1) {
+  int opt = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
     printf("Error setting server socket option. Shutting down.\n");
     shutdown_server(sockfd);
     return -1;
@@ -47,6 +50,22 @@ int create_server() {
   }
 
   printf("Server running.\n");
+
+  // HACK
+  // tava usando isso aqui pra testar só, tava mandando pro client na hora da conexão
+  int new_socket;
+  int addrlen = sizeof(server_address);
+  if ((new_socket = accept(sockfd, (struct sockaddr *)&server_address,
+                           (socklen_t *)&addrlen)) < 0) {
+    perror("accept");
+    exit(EXIT_FAILURE);
+  }
+
+  Message *message = create_message("mano", TEXT, "fala ai");
+  send_message(new_socket, message);
+
+  while (true)
+    ;
 
   return sockfd;
 }
