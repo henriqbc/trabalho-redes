@@ -217,8 +217,43 @@ void set_receiving_broadcast(int client_socket, bool state) {
   }
 }
 
+void disconnect_user_from_broadcast_server(char *nickname, Server *server) {
+  for (int i = 0; i < server->connections_qty; i++) {
+    if (strcmp(server->all_connections[i].nickname, nickname) == 0) {
+      for (int j = i; j < server->connections_qty - 1; j++) {
+        server->all_connections[j] = server->all_connections[j + 1];
+      }
+
+      server->connections_qty -= 1;
+      break;
+    }
+  }
+}
+
+void disconnect_user_from_channel_server(char *nickname, Channel channel, Server *server) {
+  kick_user_from_channel(nickname, channel.name, server);
+
+  // Remove from all_connections.
+  for (int i = 0; i < server->connections_qty; i++) {
+    if (strcmp(server->all_connections[i].nickname, nickname) == 0) {
+      for (int j = i; j < server->connections_qty - 1; j++) {
+        server->all_connections[j] = server->all_connections[j + 1];
+      }
+
+      server->connections_qty -= 1;
+      break;
+    }
+  }
+}
+
 void handle_user_connect(Message *message, int client_socket) {
   pthread_mutex_lock(&mutex);
+
+  if (user_already_connected(message->sender_nickname, channel_server)) {
+    Channel user_channel = find_user_channel(message->sender_nickname, channel_server);
+    disconnect_user_from_channel_server(message->sender_nickname, user_channel,
+                                        channel_server);
+  }
 
   if (is_nickname_already_taken(message->sender_nickname, broadcast_server)) {
     printf("Nickname is already taken.\n");
@@ -266,6 +301,29 @@ void handle_user_text(Message *message, int client_socket) {
 
 void handle_user_join(Message *message, int client_socket) {
   pthread_mutex_lock(&mutex);
+
+  if (user_already_connected(message->sender_nickname, broadcast_server)) {
+    disconnect_user_from_broadcast_server(message->sender_nickname, broadcast_server);
+  }
+
+  printf("%d\n", user_already_connected(message->sender_nickname, channel_server));
+  if (user_already_connected(message->sender_nickname, channel_server)) {
+    Channel user_current_channel = find_user_channel(message->sender_nickname, channel_server);
+    printf("%s\n", user_current_channel);
+    for (int i = 0; i < user_current_channel.members_qty; i++) {
+      if (strcmp(user_current_channel.members[i].nickname, message->sender_nickname) == 0) {
+        User user = user_current_channel.members[i];
+        printf("%s\n", user.nickname);
+        printf("%s\n", message->content);
+        move_user_through_channels(user, user_current_channel.name, message->content,
+                                   channel_server);
+      }
+    }
+
+    send_response(NULL, JOIN, NULL, client_socket);
+    pthread_mutex_unlock(&mutex);
+    return;
+  }
 
   if (is_nickname_already_taken(message->sender_nickname, channel_server)) {
     printf("Nickname is already taken.\n");
@@ -387,6 +445,7 @@ void handle_client_communication(int client_socket) {
   Message *message = receive_message(client_socket);
 
   while (message) {
+    printf("op: %d\n", message->operation);
     switch (message->operation) {
       case CONNECT:
         handle_user_connect(message, client_socket);
