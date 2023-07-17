@@ -132,33 +132,38 @@ STATUS handle_user_command(char *command, char *command_arg) {
 STATUS handle_server_message(Message *message) {
   switch (message->operation) {
     case TEXT:
-      printf("\n%s: %s\n\n", message->sender_nickname, message->content);
+      // if the user sent a message, clear the message that he wrote
+      // and print instead the message that the server sent
+      if (strcmp(message->sender_nickname, user_nickname) == 0)
+        printf("\033[A\33[2K\r");  // clears the line above the cursor
+
+      printf("\n%s: %s\n", message->sender_nickname, message->content);
       break;
     case CONNECT:
-      printf("\nSuccesfully connected to the server!\n\n");
+      printf("\nSuccesfully connected to the server!\n");
       break;
     case PING:
-      printf("\nPong!\n\n");
+      printf("\nPong!\n");
       break;
     case JOIN:
-      printf("\nSuccesfuly joined the channel!\n\n");
+      printf("\nSuccesfuly joined the channel!\n");
       break;
     case CHANNEL_NOT_FOUND:
-      printf("\nChannel not found.\n\n");
+      printf("\nChannel not found.\n");
       break;
     case NICKNAME:
       update_user_nickname(message->content);
-      printf("\nSuccesfuly updated your nickname to %s!\n\n", message->content);
+      printf("\nSuccesfuly updated your nickname to %s!\n", message->content);
       break;
     case NICKNAME_ALREADY_TAKEN:
       update_user_nickname(message->content);
-      printf("\nThe nickname is currently unavailable, please choose another one.\n\n");
+      printf("\nThe nickname is currently unavailable, please choose another one.\n");
       break;
     case KICK:
-      printf("\nUnfortunately, you were kicked from this channel by the administrator.\n\n");
+      printf("\nUnfortunately, you were kicked from this channel by the administrator.\n");
       break;
     case WHOIS:
-      printf("\nThe desired ip is: %s\n\n.", message->content);
+      printf("\nThe desired ip is: %s\n.", message->content);
       break;
     default:
       return STATUS_ERROR;
