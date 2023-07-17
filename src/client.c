@@ -50,9 +50,10 @@ void run_client() {
   pthread_join(receive_message_thread, NULL);
 }
 
-void shutdown_client(int client_socket) {
-  shutdown(client_socket, SHUT_RDWR);
-  close(client_socket);
+void shutdown_client(int socket) {
+  server_socket = -1;
+  shutdown(socket, SHUT_RDWR);
+  close(socket);
 }
 
 void *send_message_loop() {
@@ -105,6 +106,12 @@ STATUS handle_user_command(char *command, char *command_arg) {
       create_client_message_from_operation(operation, user_nickname, command, command_arg);
 
   if (operation == CONNECT) {
+    if (server_socket != -1) {
+      printf("Already connected to the server.\n");
+      delete_message(request);
+      return STATUS_ERROR;
+    }
+
     server_socket = connect_to_server();
 
     if (server_socket == -1) {
@@ -118,6 +125,11 @@ STATUS handle_user_command(char *command, char *command_arg) {
 
     delete_message(request);
     quit();
+    return STATUS_SUCCESS;
+  } else if (operation == NICKNAME && server_socket == -1) {
+    update_user_nickname(request->content);
+    printf("\nSuccesfuly updated your nickname to %s!\n", request->content);
+    delete_message(request);
     return STATUS_SUCCESS;
   }
 
@@ -159,6 +171,11 @@ STATUS handle_server_message(Message *message) {
     case NICKNAME_ALREADY_TAKEN:
       update_user_nickname(message->content);
       printf("\nThe nickname is currently unavailable, please choose another one.\n");
+      break;
+    case NICKNAME_ALREADY_TAKEN_CONNECT:
+      update_user_nickname(message->content);
+      printf("\nThe nickname is currently unavailable, please choose another one.\n");
+      shutdown_client(server_socket);
       break;
     case KICK:
       printf("\nUnfortunately, you were kicked from this channel by the administrator.\n");
