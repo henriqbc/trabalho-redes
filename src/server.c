@@ -213,6 +213,7 @@ void handle_user_connect(Message *message, int client_socket) {
 
   if (is_nickname_already_taken(message->sender_nickname, broadcast_server)) {
     printf("Nickname is already taken.\n");
+    send_response(NULL, NICKNAME_ALREADY_TAKEN, message->sender_nickname, client_socket);
   } else {
     struct sockaddr_in client_addr = get_client_addr(client_socket);
     User new_user = (User){.nickname = message->sender_nickname,
@@ -223,6 +224,8 @@ void handle_user_connect(Message *message, int client_socket) {
     add_user_to_broadcast(new_user, broadcast_server);
     printf("User %s successfully connected to the broadacast server!\n",
            message->sender_nickname);
+
+    send_response(NULL, CONNECT, NULL, client_socket);
 
     set_receiving_broadcast(client_socket, true);
   }
@@ -375,11 +378,9 @@ void handle_client_communication(int client_socket) {
   Message *message = receive_message(client_socket);
 
   while (message) {
-    printf("rogerio!, %d\n", message->operation);
     switch (message->operation) {
       case CONNECT:
         handle_user_connect(message, client_socket);
-        printf("rogerio2!\n");
         break;
       case TEXT:
         handle_user_text(message, client_socket);
