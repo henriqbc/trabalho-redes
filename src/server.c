@@ -382,6 +382,7 @@ void handle_admin_kick(Message *message, int client_socket) {
   if (!is_user_an_admin(message->sender_nickname, target_channel.name, channel_server)) {
     printf("User unauthorized to perform this command.\n");
     send_response(NULL, UNAUTHORIZED, NULL, client_socket);
+    pthread_mutex_unlock(&mutex);
     return;
   }
 
