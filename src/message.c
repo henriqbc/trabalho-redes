@@ -168,7 +168,10 @@ Message *receive_message(int socket) {
   // read remaining packets, always one MAX_PACKET_SIZE at a time
   int cursor = bytes_read;
   while (cursor < message_buffer_size) {
-    bytes_read = read(socket, buffer + cursor, MAX_PACKET_SIZE);
+    int packet_size = min(MAX_PACKET_SIZE, message_buffer_size - cursor);
+
+    bytes_read = read(socket, buffer + cursor, packet_size);
+
     cursor += bytes_read;
   }
 
