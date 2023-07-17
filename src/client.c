@@ -112,6 +112,9 @@ STATUS handle_user_command(char *command, char *command_arg) {
     printf("Client succesfully connected and running.\n");
 
   } else if (operation == QUIT) {
+    if (server_socket != -1)
+      send_message(server_socket, request);
+
     delete_message(request);
     quit();
     return STATUS_SUCCESS;

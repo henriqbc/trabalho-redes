@@ -275,6 +275,10 @@ void handle_user_join(Message *message, int client_socket) {
     printf("User %s successfully connected to %s channel in the channel-oriented server!\n",
            message->sender_nickname, message->content);
 
+    Message *response = create_message(NULL, JOIN, NULL);
+    send_message(client_socket, response);
+    delete_message(response);
+
     set_receiving_broadcast(client_socket, false);
   }
 
@@ -404,6 +408,9 @@ void handle_client_communication(int client_socket) {
         break;
       case WHOIS:
         handle_admin_whois(message);
+        break;
+      case QUIT:
+        // TODO tem que implementar esse mano aqui tbm, o client manda quando ta saindo
         break;
       default:
         printf("Unable to recognized given command.\n");
