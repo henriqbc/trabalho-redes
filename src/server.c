@@ -389,6 +389,8 @@ void handle_admin_kick(Message *message, int client_socket) {
   printf("Successfully kicked user %s from channel %s!!!\n", message->content,
          target_channel.name);
 
+  send_response(NULL, KICK_SUCCEEDED, NULL, client_socket);
+
   pthread_mutex_unlock(&mutex);
 }
 

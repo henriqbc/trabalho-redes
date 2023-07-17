@@ -182,6 +182,9 @@ STATUS handle_server_message(Message *message) {
     case KICK:
       printf("\nUnfortunately, you were kicked from this channel by the administrator.\n\n");
       break;
+    case KICK_SUCCEEDED:
+      printf("\nSuccesfully kicked the user.\n\n");
+      break;
     case WHOIS:
       printf("\nThe desired ip is: %s\n\n.", message->content);
       break;
