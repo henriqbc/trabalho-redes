@@ -257,7 +257,7 @@ void handle_user_connect(Message *message, int client_socket) {
 
   if (is_nickname_already_taken(message->sender_nickname, broadcast_server)) {
     printf("Nickname is already taken.\n");
-    send_response(NULL, NICKNAME_ALREADY_TAKEN, message->sender_nickname, client_socket);
+    send_response(NULL, NICKNAME_ALREADY_TAKEN_CONNECT, message->sender_nickname, client_socket);
   } else {
     struct sockaddr_in client_addr = get_client_addr(client_socket);
     User new_user = (User){.nickname = message->sender_nickname,
