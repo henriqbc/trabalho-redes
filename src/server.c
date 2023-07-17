@@ -1,4 +1,3 @@
-// https://stackoverflow.com/questions/6491019/struct-sigaction-incomplete-error
 #define _XOPEN_SOURCE 700
 
 #include <stdio.h>

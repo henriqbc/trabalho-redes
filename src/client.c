@@ -1,4 +1,3 @@
-// https://stackoverflow.com/questions/6491019/struct-sigaction-incomplete-error
 #define _XOPEN_SOURCE 700
 
 #include <stdlib.h>
@@ -62,7 +61,7 @@ void *send_message_loop() {
 
     char *command = substringUntil(user_input, " \n");
     char *command_arg = strlen(user_input) != strlen(command)
-                            ? substringUntil(user_input + strlen(command), "\n")
+                            ? substringUntil(user_input + strlen(command) + 1, "\n")
                             : NULL;
 
     if (user_input[0] != '/')
