@@ -424,7 +424,6 @@ void handle_client_communication(int client_socket) {
 }
 
 void start_server(int server_socket) {
-  printf("server_socket: %d", server_socket);
   define_server_sigint_handler();
 
   broadcast_server = build_broadcast_server_config(NULL, 0);
