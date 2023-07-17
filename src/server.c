@@ -275,9 +275,7 @@ void handle_user_join(Message *message, int client_socket) {
     printf("User %s successfully connected to %s channel in the channel-oriented server!\n",
            message->sender_nickname, message->content);
 
-    Message *response = create_message(NULL, JOIN, NULL);
-    send_message(client_socket, response);
-    delete_message(response);
+    send_response(NULL, JOIN, NULL, client_socket);
 
     set_receiving_broadcast(client_socket, false);
   }
@@ -300,9 +298,7 @@ void handle_user_nickname_update(Message *message, int client_socket) {
 
   // TODO por enquanto ta mandando só NICKNAME sempre,
   // mas se o nickname ja existir tem que mandar NICKNAME_ALREADY_TAKEN e o nick antigo
-  Message *response = create_message(NULL, NICKNAME, message->content);
-  send_message(client_socket, response);
-  delete_message(response);
+  send_response(NULL, NICKNAME, message->content, client_socket);
 
   printf("Successfully renamed user %s to %s!\n", message->sender_nickname, message->content);
 
@@ -389,7 +385,7 @@ void handle_client_communication(int client_socket) {
         handle_user_text(message, client_socket);
         break;
       case PING:
-        printf("Pong!\n");
+        send_response(NULL, PING, NULL, client_socket);
         break;
       case JOIN:
         handle_user_join(message, client_socket);
@@ -652,6 +648,12 @@ void unmute_user(char *nickname, char *channel_name, Server *server) {
           current_channel.members[j].muted = false;
       }
   }
+}
+
+void send_response(char *server_nickname, Operation operation, char *content, int client_socket) {
+  Message *response = create_message(server_nickname, operation, content);
+  send_message(client_socket, response);
+  delete_message(response);
 }
 
 void shutdown_server(int server_socket) {

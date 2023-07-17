@@ -59,6 +59,8 @@ void kick_user_from_channel(char *nickname, char *channel_name, Server *server);
 void mute_user(char *nickname, char *channel_name, Server *server);
 void unmute_user(char *nickname, char *channel_name, Server *server);
 
+void send_response(char *server_nickname, Operation operation, char *content, int client_socket);
+
 void delete_server_config(Server *server);
 
 void shutdown_server(int server_socket);
