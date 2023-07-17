@@ -9,7 +9,6 @@
 
 #define MESSAGE_SERIALIZATION_SEPARATOR '|'
 #define MESSAGE_SERIALIZATION_SEPARATOR_STRING "|"
-#define MAX_PACKET_SIZE 4096
 
 Message *create_message(char *sender_nickname, Operation operation, char *content) {
 
@@ -31,6 +30,12 @@ void delete_message(Message *message) {
   free(message);
 }
 
+void delete_message_content(Message *message) {
+
+  free(message->sender_nickname);
+  free(message->content);
+}
+
 SerializedMessage *create_serialized_message(byte *buffer, int buffer_size) {
   SerializedMessage *serialized_message = malloc(sizeof(SerializedMessage));
 
@@ -47,10 +52,11 @@ void delete_serialized_message(SerializedMessage *serialized_message) {
   free(serialized_message);
 }
 
-Message *create_client_message_from_operation(
-    Operation operation, char *sender_nickname, char *command, char *commandArg) {
+Message *create_client_message_from_operation(Operation operation, char *sender_nickname,
+                                              char *command, char *commandArg) {
 
-  Message *message = create_message(sender_nickname, operation, operation == TEXT ? command : commandArg);
+  Message *message =
+      create_message(sender_nickname, operation, operation == TEXT ? command : commandArg);
   return message;
 }
 
@@ -59,7 +65,8 @@ SerializedMessage *serialize_message(Message *message) {
   byte *buffer = malloc(buffer_size);
 
   // SENDER NICKNAME
-  int sender_nickname_size = message->sender_nickname != NULL ? strlen(message->sender_nickname) : 0;
+  int sender_nickname_size =
+      message->sender_nickname != NULL ? strlen(message->sender_nickname) : 0;
   buffer = realloc(buffer, buffer_size + sender_nickname_size + 1);
   memcpy(buffer + buffer_size, message->sender_nickname, sender_nickname_size);
 
@@ -102,14 +109,16 @@ Message *deserialize_message(SerializedMessage *serialized_message) {
 
   int cursor = sizeof(int);  // skip buffer_size
 
-  char *sender_nickname = substringUntil(serialized_message->buffer + cursor, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
+  char *sender_nickname = substringUntil(serialized_message->buffer + cursor,
+                                         MESSAGE_SERIALIZATION_SEPARATOR_STRING);
   cursor += strlen(sender_nickname) + 1;
 
-  Operation *operation = (Operation *)substringUntil(
-      serialized_message->buffer + cursor, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
+  Operation *operation = (Operation *)substringUntil(serialized_message->buffer + cursor,
+                                                     MESSAGE_SERIALIZATION_SEPARATOR_STRING);
   cursor += sizeof(Operation) + 1;
 
-  char *content = substringUntil(serialized_message->buffer + cursor, MESSAGE_SERIALIZATION_SEPARATOR_STRING);
+  char *content = substringUntil(serialized_message->buffer + cursor,
+                                 MESSAGE_SERIALIZATION_SEPARATOR_STRING);
 
   Message *message = create_message(sender_nickname, *operation, content);
 
@@ -141,7 +150,9 @@ Message *receive_message(int socket) {
   byte *buffer = malloc(MAX_PACKET_SIZE);
 
   // read first guaranteed packet
-  int bytes_read = read(socket, buffer, MAX_PACKET_SIZE);  // works fine if message is smaller than MAX_PACKET_SIZE
+  int bytes_read =
+      read(socket, buffer,
+           MAX_PACKET_SIZE);  // works fine if message is smaller than MAX_PACKET_SIZE
 
   if (bytes_read < 4) {
     free(buffer);
@@ -161,7 +172,8 @@ Message *receive_message(int socket) {
     cursor += bytes_read;
   }
 
-  SerializedMessage *serialized_message = create_serialized_message(buffer, message_buffer_size);
+  SerializedMessage *serialized_message =
+      create_serialized_message(buffer, message_buffer_size);
   Message *message = deserialize_message(serialized_message);
 
   free(buffer);

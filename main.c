@@ -11,9 +11,10 @@ int main(int argc, char const *argv[]) {
 
   if (argc != 2) handle_wrong_program_usage();
 
-  if (strcmp(argv[1], "server") == 0)
-    start_server(create_server());
-  else if (strcmp(argv[1], "client") == 0)
+  if (strcmp(argv[1], "server") == 0) {
+    int server_socket = create_server();
+    start_server(server_socket);
+  } else if (strcmp(argv[1], "client") == 0)
     run_client();
   else
     handle_wrong_program_usage();

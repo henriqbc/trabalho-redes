@@ -95,17 +95,28 @@ void *receive_message_loop() {
 
 STATUS handle_user_command(char *command, char *command_arg) {
   Operation operation;
-  if (strcmp(command, "/connect") == 0)       operation = CONNECT;
-  else if (strcmp(command, "/quit") == 0)     operation = QUIT;
-  else if (strcmp(command, "/ping") == 0)     operation = PING;
-  else if (strcmp(command, "/join") == 0)     operation = JOIN;
-  else if (strcmp(command, "/nickname") == 0) operation = NICKNAME;
-  else if (strcmp(command, "/kick") == 0)     operation = KICK;
-  else if (strcmp(command, "/mute") == 0)     operation = MUTE;
-  else if (strcmp(command, "/unmute") == 0)   operation = UNMUTE;
-  else if (strcmp(command, "/whois") == 0)    operation = WHOIS;
-  else if (command[0] == '/')                 operation = INVALID_OPERATION;
-  else return TEXT;
+  if (strcmp(command, "/connect") == 0)
+    operation = CONNECT;
+  else if (strcmp(command, "/quit") == 0)
+    operation = QUIT;
+  else if (strcmp(command, "/ping") == 0)
+    operation = PING;
+  else if (strcmp(command, "/join") == 0)
+    operation = JOIN;
+  else if (strcmp(command, "/nickname") == 0)
+    operation = NICKNAME;
+  else if (strcmp(command, "/kick") == 0)
+    operation = KICK;
+  else if (strcmp(command, "/mute") == 0)
+    operation = MUTE;
+  else if (strcmp(command, "/unmute") == 0)
+    operation = UNMUTE;
+  else if (strcmp(command, "/whois") == 0)
+    operation = WHOIS;
+  else if (command[0] == '/')
+    operation = INVALID_OPERATION;
+  else
+    return TEXT;
 
   if (operation == INVALID_OPERATION) return STATUS_INVALID_COMMAND;
 
@@ -207,8 +218,7 @@ void quit() {
 
   free(user_nickname);
 
-  if (server_socket != -1)
-    shutdown_client(server_socket);
+  if (server_socket != -1) shutdown_client(server_socket);
 }
 
 void print_greetings_message() {
@@ -220,9 +230,7 @@ void print_greetings_message() {
   printf("\n");
 }
 
-void sigint_handler() {
-  printf("\nTo exit the application, use '/quit'.\n\n");
-}
+void sigint_handler() { printf("\nTo exit the application, use '/quit'.\n\n"); }
 
 void define_sigint_handler() {
   struct sigaction act;

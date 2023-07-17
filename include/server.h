@@ -39,8 +39,19 @@ void add_user_to_channel(User user, char *channel_name, Server *server);
 void move_user_through_channels(User user, char *current_channel_name, char *new_channel_name,
                                 Server *server);
 
+void update_channel_nickname(char *old_nickname, char *new_nickname, char *channel_name,
+                             Server *server);
+void update_broadcast_nickname(char *old_nickname, char *new_nickname, Server *server);
+
+char *whois_nickname(char *nickname, char *channel_name, Server *server);
+
 bool is_nickname_already_taken(char *nickname, Server *server);
 bool channel_exists(char *channel_name, Server *server);
+
+bool is_user_an_admin(char *nickname, char *channel_name, Server *server);
+Channel find_user_channel(char *nickname, Server *server);
+
+bool user_already_connected(char *nickname, Server *server);
 
 void kick_user_from_broadcast(char *nickname, Server *server);
 void kick_user_from_channel(char *nickname, char *channel_name, Server *server);
