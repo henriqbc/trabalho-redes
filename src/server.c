@@ -393,6 +393,10 @@ void handle_admin_kick(Message *message, int client_socket) {
   pthread_mutex_lock(&mutex);
 
   Channel target_channel = find_user_channel(message->content, channel_server);
+  User kicked_user;
+  for (int i = 0; i < target_channel.members_qty; i++)
+    if (strcmp(message->content, target_channel.members[i].nickname) == 0)
+      kicked_user = target_channel.members[i];
 
   if (target_channel.name == NULL) {
     printf("User %s doesn't exist.", message->content);
@@ -412,6 +416,7 @@ void handle_admin_kick(Message *message, int client_socket) {
   printf("Successfully kicked user %s from channel %s!!!\n", message->content,
          target_channel.name);
 
+  send_response(NULL, KICK, NULL, kicked_user.socket_fd);
   send_response(NULL, KICK_SUCCEEDED, NULL, client_socket);
 
   pthread_mutex_unlock(&mutex);
@@ -670,7 +675,6 @@ void kick_user_from_channel(char *nickname, char *channel_name, Server *server) 
         if (strcmp(target_channel.members[j].nickname, nickname) != 0) {
           updated_members[copy_index++] = target_channel.members[j];
         } else {
-          send_response(NULL, KICK, NULL, target_channel.members[j].socket_fd);
           add_user_to_all_connections(target_channel.members[j], broadcast_server);
           set_receiving_broadcast(target_channel.members[j].socket_fd, true);
         }
