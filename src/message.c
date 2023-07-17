@@ -113,17 +113,17 @@ Message *deserialize_message(SerializedMessage *serialized_message) {
                                          MESSAGE_SERIALIZATION_SEPARATOR_STRING);
   cursor += strlen(sender_nickname) + 1;
 
-  Operation *operation = (Operation *)substringUntil(serialized_message->buffer + cursor,
-                                                     MESSAGE_SERIALIZATION_SEPARATOR_STRING);
+  Operation operation;
+  memcpy(&operation, serialized_message->buffer + cursor, sizeof(Operation));
+
   cursor += sizeof(Operation) + 1;
 
   char *content = substringUntil(serialized_message->buffer + cursor,
                                  MESSAGE_SERIALIZATION_SEPARATOR_STRING);
 
-  Message *message = create_message(sender_nickname, *operation, content);
+  Message *message = create_message(sender_nickname, operation, content);
 
   free(sender_nickname);
-  free(operation);
   free(content);
 
   return message;
@@ -154,7 +154,7 @@ Message *receive_message(int socket) {
       read(socket, buffer,
            MAX_PACKET_SIZE);  // works fine if message is smaller than MAX_PACKET_SIZE
 
-  if (bytes_read < 4) {
+  if (bytes_read < sizeof(Operation)) {
     free(buffer);
     return NULL;
   }
@@ -165,7 +165,7 @@ Message *receive_message(int socket) {
   // resize buffer to store all message bytes
   buffer = realloc(buffer, message_buffer_size);
 
-  // read remaining packets, always one MAX_PACKET_SIZE at a time
+  // read remaining packets, always capping to MAX_PACKET_SIZE bytes at a time
   int cursor = bytes_read;
   while (cursor < message_buffer_size) {
     int packet_size = min(MAX_PACKET_SIZE, message_buffer_size - cursor);
