@@ -71,8 +71,7 @@ void *send_message_loop() {
     else
       status = handle_user_command(command, command_arg);
 
-    if (status == STATUS_INVALID_COMMAND)
-      printf("'%s' is an invalid command.\n", command);
+    if (status == STATUS_INVALID_COMMAND) printf("'%s' is an invalid command.\n", command);
 
     free(user_input);
     free(command);
@@ -120,8 +119,7 @@ STATUS handle_user_command(char *command, char *command_arg) {
       return STATUS_ERROR;
     }
   } else if (operation == QUIT) {
-    if (server_socket != -1)
-      send_message(server_socket, request);
+    if (server_socket != -1) send_message(server_socket, request);
 
     delete_message(request);
     quit();
