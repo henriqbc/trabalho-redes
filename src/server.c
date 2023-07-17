@@ -378,6 +378,14 @@ void handle_admin_kick(Message *message, int client_socket) {
   pthread_mutex_lock(&mutex);
 
   Channel target_channel = find_user_channel(message->content, channel_server);
+
+  if (target_channel.name == NULL) {
+    printf("User %s doesn't exist.", message->content);
+    send_response(NULL, USER_NOT_FOUND, NULL, client_socket);
+    pthread_mutex_unlock(&mutex);
+    return;
+  }
+
   if (!is_user_an_admin(message->sender_nickname, target_channel.name, channel_server)) {
     printf("User unauthorized to perform this command.\n");
     send_response(NULL, UNAUTHORIZED, NULL, client_socket);
@@ -631,15 +639,19 @@ void kick_user_from_broadcast(char *nickname, Server *server) {
 
   free(server->all_connections);
   server->all_connections = new_connections;
+  server->connections_qty--;
 }
 
 void kick_user_from_channel(char *nickname, char *channel_name, Server *server) {
 
   for (int i = 0; i < server->channels_qty; i++) {
     if (strcmp(server->channels[i].name, channel_name) == 0) {
+
       Channel target_channel = server->channels[i];
       User *updated_members = malloc(sizeof(User) * (target_channel.members_qty - 1));
       int copy_index = 0;
+
+      printf("qtd de usuarios antes kickar: %d\n", server->channels[i].members_qty);
 
       for (int j = 0; j < target_channel.members_qty; j++) {
         if (strcmp(target_channel.members[j].nickname, nickname) != 0)
@@ -648,7 +660,9 @@ void kick_user_from_channel(char *nickname, char *channel_name, Server *server) 
           send_response(NULL, KICK, NULL, target_channel.members[j].socket_fd);
       }
 
+      free(server->channels[i].members);
       server->channels[i].members = updated_members;
+      server->channels[i].members_qty--;
     }
   }
 }
