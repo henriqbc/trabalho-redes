@@ -95,7 +95,7 @@ int create_server() {
 }
 
 void signal_callback_handler() {
-  printf("Shutting down server.");
+  printf("\nShutting down server.\n");
   shutdown_server(server_socket_id);
   delete_server_config(broadcast_server);
   delete_server_config(channel_server);
@@ -119,8 +119,9 @@ void delete_server_config(Server *server) {
 Channel find_user_channel(char *nickname, Server *server) {
   for (int i = 0; i < server->channels_qty; i++) {
     for (int j = 0; j < server->channels[i].members_qty; j++) {
-      if (strcmp(server->channels[i].members[j].nickname, nickname))
+      if (strcmp(server->channels[i].members[j].nickname, nickname) == 0) {
         return server->channels[i];
+      }
     }
   }
 
@@ -178,9 +179,7 @@ char *whois_nickname(char *nickname, char *channel_name, Server *server) {
     if (strcmp(server->channels[i].name, channel_name) == 0) {
       for (int j = 0; j < server->connections_qty; j++) {
         if (strcmp(server->channels[i].members[j].nickname, nickname) == 0) {
-          struct sockaddr_in target_addr =
-              get_client_addr(server->channels[i].members[j].socket_fd);
-          return get_ip_str_from_sockaddr(target_addr);
+          return server->channels[i].members[j].ip;
         }
       }
     }
@@ -193,6 +192,16 @@ bool is_receiving_broadcast(int client_socket) {
   for (int i = 0; i < connected_clients; i++) {
     if (clients[i].sockfd == client_socket) {
       return clients[i].receives_broadcast;
+    }
+  }
+
+  return false;
+}
+
+bool is_muted(int client_socket, Channel *channel) {
+  for (int i = 0; i < channel->members_qty; i++) {
+    if (channel->members[i].socket_fd == client_socket) {
+      return channel->members[i].muted;
     }
   }
 
@@ -222,7 +231,7 @@ void handle_user_connect(Message *message, int client_socket) {
                            .muted = false};
 
     add_user_to_broadcast(new_user, broadcast_server);
-    printf("User %s successfully connected to the broadacast server!\n",
+    printf("User %s successfully connected to the broadcast server!\n",
            message->sender_nickname);
 
     send_response(NULL, CONNECT, NULL, client_socket);
@@ -246,8 +255,11 @@ void handle_user_text(Message *message, int client_socket) {
 
   // Channel server transmission.
   Channel user_channel = find_user_channel(message->sender_nickname, channel_server);
-  for (int i = 0; i < user_channel.members_qty; i++)
-    send_message(user_channel.members[i].socket_fd, message);
+  if (!is_muted(client_socket, &user_channel)) {
+    for (int i = 0; i < user_channel.members_qty; i++) {
+      send_message(user_channel.members[i].socket_fd, message);
+    }
+  }
 
   pthread_mutex_unlock(&mutex);
 }
@@ -261,7 +273,6 @@ void handle_user_join(Message *message, int client_socket) {
     if (!channel_exists(message->content, channel_server)) {
       char *new_channel_name = malloc(MAX_PACKET_SIZE * sizeof(char));
       strcpy(new_channel_name, message->content);
-
       Channel new_channel =
           (Channel){.name = new_channel_name, .members = NULL, .members_qty = 0};
 
@@ -288,8 +299,6 @@ void handle_user_join(Message *message, int client_socket) {
 
 void handle_user_nickname_update(Message *message, int client_socket) {
   pthread_mutex_lock(&mutex);
-
-  printf("maluco beleza\n");
 
   if (is_receiving_broadcast(client_socket)) {
     update_broadcast_nickname(message->sender_nickname, message->content, broadcast_server);
@@ -334,8 +343,6 @@ void handle_admin_mute(Message *message) {
   }
 
   mute_user(message->content, target_channel.name, channel_server);
-  printf("Successfully muted user %s from channel %s!!!\n", message->content,
-         target_channel.name);
 
   pthread_mutex_unlock(&mutex);
 }
@@ -350,8 +357,6 @@ void handle_admin_unmute(Message *message) {
   }
 
   unmute_user(message->content, target_channel.name, channel_server);
-  printf("Successfully unmuted user %s from channel %s!!!\n", message->content,
-         target_channel.name);
 
   pthread_mutex_unlock(&mutex);
 }
@@ -360,6 +365,10 @@ void handle_admin_whois(Message *message) {
   pthread_mutex_lock(&mutex);
 
   Channel target_channel = find_user_channel(message->content, channel_server);
+  printf("member_qty: %d\n", target_channel.members_qty);
+  for (int i = 0; i < target_channel.members_qty; i++) {
+    printf("member %d: %s\n", target_channel.members[i].nickname);
+  }
   if (!is_user_an_admin(message->sender_nickname, target_channel.name, channel_server)) {
     printf("User unauthorized to perform this command.\n");
     return;
@@ -617,6 +626,7 @@ void add_user_to_channel(User user, char *channel_name, Server *server) {
       current_channel.members =
           realloc(current_channel.members, sizeof(User) * current_channel.members_qty);
       current_channel.members[current_channel.members_qty - 1] = user;
+      server->channels[i] = current_channel;
 
       return;
     }
@@ -631,27 +641,36 @@ void move_user_through_channels(User user, char *current_channel_name, char *new
 
 void mute_user(char *nickname, char *channel_name, Server *server) {
   for (int i = 0; i < server->channels_qty; i++) {
-    Channel current_channel = server->channels[i];
-    if (strcmp(current_channel.name, channel_name) == 0)
-      for (int j = 0; j < current_channel.members_qty; j++) {
-        if (strcmp(current_channel.members[j].nickname, nickname) == 0)
-          current_channel.members[j].muted = true;
+    if (strcmp(server->channels[i].name, channel_name) == 0)
+      for (int j = 0; j < server->channels[i].members_qty; j++) {
+        if (strcmp(server->channels[i].members[j].nickname, nickname) == 0) {
+          server->channels[i].members[j].muted = true;
+          printf("Successfully muted user %s from channel %s!\n", nickname, channel_name);
+          return;
+        }
       }
   }
+
+  printf("Unable to mute user %s. Error: not found.\n", nickname);
 }
 
 void unmute_user(char *nickname, char *channel_name, Server *server) {
   for (int i = 0; i < server->channels_qty; i++) {
-    Channel current_channel = server->channels[i];
-    if (strcmp(current_channel.name, channel_name) == 0)
-      for (int j = 0; j < current_channel.members_qty; j++) {
-        if (strcmp(current_channel.members[j].nickname, nickname) == 0)
-          current_channel.members[j].muted = false;
+    if (strcmp(server->channels[i].name, channel_name) == 0)
+      for (int j = 0; j < server->channels[i].members_qty; j++) {
+        if (strcmp(server->channels[i].members[j].nickname, nickname) == 0) {
+          server->channels[i].members[j].muted = false;
+          printf("Successfully unmuted user %s from channel %s!\n", nickname, channel_name);
+          return;
+        }
       }
   }
+
+  printf("Unable to unmute user %s. Error: not found.\n", nickname);
 }
 
-void send_response(char *server_nickname, Operation operation, char *content, int client_socket) {
+void send_response(char *server_nickname, Operation operation, char *content,
+                   int client_socket) {
   Message *response = create_message(server_nickname, operation, content);
   send_message(client_socket, response);
   delete_message(response);
