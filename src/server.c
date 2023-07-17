@@ -294,6 +294,12 @@ void handle_user_nickname_update(Message *message, int client_socket) {
                             channel_server);
   }
 
+  // TODO por enquanto ta mandando só NICKNAME sempre,
+  // mas se o nickname ja existir tem que mandar NICKNAME_ALREADY_TAKEN e o nick antigo
+  Message *response = create_message(NULL, NICKNAME, message->content);
+  send_message(client_socket, response);
+  delete_message(response);
+
   printf("Successfully renamed user %s to %s!\n", message->sender_nickname, message->content);
 
   pthread_mutex_unlock(&mutex);

@@ -111,7 +111,7 @@ Message *deserialize_message(SerializedMessage *serialized_message) {
 
   char *sender_nickname = substringUntil(serialized_message->buffer + cursor,
                                          MESSAGE_SERIALIZATION_SEPARATOR_STRING);
-  cursor += strlen(sender_nickname) + 1;
+  cursor += (sender_nickname == NULL ? 0 : strlen(sender_nickname)) + 1;
 
   Operation operation;
   memcpy(&operation, serialized_message->buffer + cursor, sizeof(Operation));
