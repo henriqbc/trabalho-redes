@@ -114,6 +114,7 @@ void define_server_sigint_handler() {
 void delete_server_config(Server *server) {
   free(server->all_connections);
   free(server->channels);
+  free(server);
 }
 
 Channel find_user_channel(char *nickname, Server *server) {
@@ -257,7 +258,8 @@ void handle_user_connect(Message *message, int client_socket) {
 
   if (is_nickname_already_taken(message->sender_nickname, broadcast_server)) {
     printf("Nickname is already taken.\n");
-    send_response(NULL, NICKNAME_ALREADY_TAKEN_CONNECT, message->sender_nickname, client_socket);
+    send_response(NULL, NICKNAME_ALREADY_TAKEN_CONNECT, message->sender_nickname,
+                  client_socket);
   } else {
     struct sockaddr_in client_addr = get_client_addr(client_socket);
     User new_user = (User){.nickname = message->sender_nickname,
@@ -265,7 +267,7 @@ void handle_user_connect(Message *message, int client_socket) {
                            .ip = get_ip_str_from_sockaddr(client_addr),
                            .muted = false};
 
-    add_user_to_broadcast(new_user, broadcast_server);
+    add_user_to_all_connections(new_user, broadcast_server);
     printf("User %s successfully connected to the broadcast server!\n",
            message->sender_nickname);
 
@@ -306,15 +308,11 @@ void handle_user_join(Message *message, int client_socket) {
     disconnect_user_from_broadcast_server(message->sender_nickname, broadcast_server);
   }
 
-  printf("%d\n", user_already_connected(message->sender_nickname, channel_server));
   if (user_already_connected(message->sender_nickname, channel_server)) {
     Channel user_current_channel = find_user_channel(message->sender_nickname, channel_server);
-    printf("%s\n", user_current_channel);
     for (int i = 0; i < user_current_channel.members_qty; i++) {
       if (strcmp(user_current_channel.members[i].nickname, message->sender_nickname) == 0) {
         User user = user_current_channel.members[i];
-        printf("%s\n", user.nickname);
-        printf("%s\n", message->content);
         move_user_through_channels(user, user_current_channel.name, message->content,
                                    channel_server);
       }
@@ -344,6 +342,7 @@ void handle_user_join(Message *message, int client_socket) {
                            .muted = false};
 
     add_user_to_channel(new_user, message->content, channel_server);
+    add_user_to_all_connections(new_user, channel_server);
     printf("User %s successfully connected to %s channel in the channel-oriented server!\n",
            message->sender_nickname, message->content);
 
@@ -447,7 +446,6 @@ void handle_client_communication(int client_socket) {
   Message *message = receive_message(client_socket);
 
   while (message) {
-    printf("op: %d\n", message->operation);
     switch (message->operation) {
       case CONNECT:
         handle_user_connect(message, client_socket);
@@ -671,8 +669,9 @@ bool channel_exists(char *channel_name, Server *server) {
   return false;
 }
 
-void add_user_to_broadcast(User user, Server *server) {
+void add_user_to_all_connections(User user, Server *server) {
   server->connections_qty++;
+  if (server->all_connections == NULL) server->all_connections = malloc(0);
   server->all_connections =
       realloc(server->all_connections, sizeof(User) * (server->connections_qty));
 
