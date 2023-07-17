@@ -126,7 +126,7 @@ Channel find_user_channel(char *nickname, Server *server) {
     }
   }
 
-  return (Channel){};
+  return (Channel){.members = NULL, .members_qty = -1, .name = NULL};
 }
 
 bool is_user_an_admin(char *nickname, char *channel_name, Server *server) {
@@ -422,20 +422,24 @@ void handle_admin_whois(Message *message) {
   pthread_mutex_lock(&mutex);
 
   Channel target_channel = find_user_channel(message->content, channel_server);
-  printf("member_qty: %d\n", target_channel.members_qty);
-  for (int i = 0; i < target_channel.members_qty; i++) {
-    printf("member %d: %s\n", target_channel.members[i].nickname);
+  if (target_channel.name == NULL) {
+    printf("Provided nickname \"%s\" is not currently connected!\n", message->content);
+
+    pthread_mutex_unlock(&mutex);
+    return;
   }
+
   if (!is_user_an_admin(message->sender_nickname, target_channel.name, channel_server)) {
     printf("User unauthorized to perform this command.\n");
     return;
   }
 
   char *target_ip = whois_nickname(message->content, target_channel.name, channel_server);
-  if (target_ip)
+  if (target_ip != NULL)
     printf("%s's IP is %s!\n", message->content, target_ip);
   else
-    printf("Provided nickname \"%s\" is not currently connected!\n", message->content);
+    printf("Provided nickname \"%s\" is not currently connected to this channel!\n",
+           message->content);
 
   pthread_mutex_unlock(&mutex);
 }
