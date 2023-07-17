@@ -60,6 +60,8 @@ void *send_message_loop() {
   while (client_running) {
     char *user_input = readString(stdin, "\n");
 
+    if (user_input == NULL) continue;
+
     char *command = substringUntil(user_input, " \n");
     char *command_arg = strlen(user_input) != strlen(command)
                             ? substringUntil(user_input + strlen(command) + 1, "\n")
@@ -180,8 +182,14 @@ STATUS handle_server_message(Message *message) {
     case KICK:
       printf("\nUnfortunately, you were kicked from this channel by the administrator.\n\n");
       break;
+    case KICK_SUCCEEDED:
+      printf("\nSuccesfully kicked the user.\n\n");
+      break;
     case WHOIS:
       printf("\nThe desired ip is: %s\n\n.", message->content);
+      break;
+    case UNAUTHORIZED:
+      printf("\nYou must be an admin to use this command.\n\n");
       break;
     default:
       return STATUS_ERROR;

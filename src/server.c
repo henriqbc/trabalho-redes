@@ -374,18 +374,22 @@ void handle_user_nickname_update(Message *message, int client_socket) {
   pthread_mutex_unlock(&mutex);
 }
 
-void handle_admin_kick(Message *message) {
+void handle_admin_kick(Message *message, int client_socket) {
   pthread_mutex_lock(&mutex);
 
   Channel target_channel = find_user_channel(message->content, channel_server);
   if (!is_user_an_admin(message->sender_nickname, target_channel.name, channel_server)) {
     printf("User unauthorized to perform this command.\n");
+    send_response(NULL, UNAUTHORIZED, NULL, client_socket);
+    pthread_mutex_unlock(&mutex);
     return;
   }
 
   kick_user_from_channel(message->content, target_channel.name, channel_server);
   printf("Successfully kicked user %s from channel %s!!!\n", message->content,
          target_channel.name);
+
+  send_response(NULL, KICK_SUCCEEDED, NULL, client_socket);
 
   pthread_mutex_unlock(&mutex);
 }
@@ -465,7 +469,7 @@ void handle_client_communication(int client_socket) {
         handle_user_nickname_update(message, client_socket);
         break;
       case KICK:
-        handle_admin_kick(message);
+        handle_admin_kick(message, client_socket);
         break;
       case MUTE:
         handle_admin_mute(message);
