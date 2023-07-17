@@ -107,7 +107,7 @@ STATUS handle_user_command(char *command, char *command_arg) {
 
   if (operation == CONNECT) {
     if (server_socket != -1) {
-      printf("Already connected to the server.\n");
+      printf("\nAlready connected to the server.\n\n");
       delete_message(request);
       return STATUS_ERROR;
     }
@@ -115,7 +115,7 @@ STATUS handle_user_command(char *command, char *command_arg) {
     server_socket = connect_to_server();
 
     if (server_socket == -1) {
-      printf("Error connecting to the server.\n");
+      printf("\nError connecting to the server.\n\n");
       delete_message(request);
       return STATUS_ERROR;
     }
@@ -128,7 +128,7 @@ STATUS handle_user_command(char *command, char *command_arg) {
     return STATUS_SUCCESS;
   } else if (operation == NICKNAME && server_socket == -1) {
     update_user_nickname(request->content);
-    printf("\nSuccesfuly updated your nickname to %s!\n", request->content);
+    printf("\nSuccesfuly updated your nickname to %s!\n\n", request->content);
     delete_message(request);
     return STATUS_SUCCESS;
   }
@@ -136,7 +136,7 @@ STATUS handle_user_command(char *command, char *command_arg) {
   if (server_socket != -1)
     send_message(server_socket, request);
   else
-    printf("You must first connect to the server using '/connect'.\n");
+    printf("\nYou must first connect to the server using '/connect'.\n\n");
 
   delete_message(request);
   return STATUS_SUCCESS;
@@ -148,40 +148,42 @@ STATUS handle_server_message(Message *message) {
       // if the user sent a message, clear the message that he wrote
       // and print instead the message that the server sent
       if (strcmp(message->sender_nickname, user_nickname) == 0)
-        printf("\033[A\33[2K\r");  // clears the line above the cursor
+        printf("\033[A\33[2K\r");  // clears the line the user sent
 
-      printf("\n%s: %s\n", message->sender_nickname, message->content);
+      printf("\033[A\33[2K\r");  // clears the extra line after receiving
+
+      printf("\n%s: %s\n\n", message->sender_nickname, message->content);
       break;
     case CONNECT:
-      printf("\nSuccesfully connected to the server!\n");
+      printf("\nSuccesfully connected to the server!\n\n");
       break;
     case PING:
-      printf("\nPong!\n");
+      printf("\nPong!\n\n");
       break;
     case JOIN:
-      printf("\nSuccesfuly joined the channel!\n");
+      printf("\nSuccesfuly joined the channel!\n\n");
       break;
     case CHANNEL_NOT_FOUND:
-      printf("\nChannel not found.\n");
+      printf("\nChannel not found.\n\n");
       break;
     case NICKNAME:
       update_user_nickname(message->content);
-      printf("\nSuccesfuly updated your nickname to %s!\n", message->content);
+      printf("\nSuccesfuly updated your nickname to %s!\n\n", message->content);
       break;
     case NICKNAME_ALREADY_TAKEN:
       update_user_nickname(message->content);
-      printf("\nThe nickname is currently unavailable, please choose another one.\n");
+      printf("\nThe nickname is currently unavailable, please choose another one.\n\n");
       break;
     case NICKNAME_ALREADY_TAKEN_CONNECT:
       update_user_nickname(message->content);
-      printf("\nThe nickname is currently unavailable, please choose another one.\n");
+      printf("\nThe nickname is currently unavailable, please choose another one.\n\n");
       shutdown_client(server_socket);
       break;
     case KICK:
-      printf("\nUnfortunately, you were kicked from this channel by the administrator.\n");
+      printf("\nUnfortunately, you were kicked from this channel by the administrator.\n\n");
       break;
     case WHOIS:
-      printf("\nThe desired ip is: %s\n.", message->content);
+      printf("\nThe desired ip is: %s\n\n.", message->content);
       break;
     default:
       return STATUS_ERROR;
