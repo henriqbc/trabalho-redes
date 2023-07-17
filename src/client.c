@@ -64,10 +64,14 @@ void *send_message_loop() {
                             ? substringUntil(user_input + strlen(command) + 1, "\n")
                             : NULL;
 
+    STATUS status;
     if (user_input[0] != '/')
-      handle_user_command(user_input, NULL);
+      status = handle_user_command(user_input, NULL);
     else
-      handle_user_command(command, command_arg);
+      status = handle_user_command(command, command_arg);
+
+    if (status == STATUS_INVALID_COMMAND)
+      printf("'%s' is an invalid command.\n", command);
 
     free(user_input);
     free(command);
