@@ -623,14 +623,17 @@ void kick_user_from_broadcast(char *nickname, Server *server) {
 void kick_user_from_channel(char *nickname, char *channel_name, Server *server) {
 
   for (int i = 0; i < server->channels_qty; i++) {
-    if (strcmp(server->channels[i].name, nickname) == 0) {
+    if (strcmp(server->channels[i].name, channel_name) == 0) {
       Channel target_channel = server->channels[i];
       User *updated_members = malloc(sizeof(User) * (target_channel.members_qty - 1));
       int copy_index = 0;
 
-      for (int j = 0; j < target_channel.members_qty; j++)
-        if (strcmp(server->all_connections[i].nickname, nickname) != 0)
+      for (int j = 0; j < target_channel.members_qty; j++) {
+        if (strcmp(target_channel.members[j].nickname, nickname) != 0)
           updated_members[copy_index++] = target_channel.members[j];
+        else
+          send_response(NULL, KICK, NULL, target_channel.members[j].socket_fd);
+      }
 
       server->channels[i].members = updated_members;
     }
