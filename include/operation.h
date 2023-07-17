@@ -4,6 +4,7 @@
 
 enum Operation {
   INVALID_OPERATION,
+  UNAUTHORIZED,
 
   TEXT,
   CONNECT,
