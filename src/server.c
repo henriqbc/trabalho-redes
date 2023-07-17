@@ -282,13 +282,8 @@ void handle_user_connect(Message *message, int client_socket) {
 void handle_user_text(Message *message, int client_socket) {
   pthread_mutex_lock(&mutex);
 
-  printf("oi\n");
-  printf("a mensagem que tem que mandar: (%s: %s)", message->sender_nickname, message->content);
-
   if (is_receiving_broadcast(client_socket)) {  // Broadcast server transmission.
-    printf("aqui dentro do broadcast\n");
     for (int i = 0; i < broadcast_server->connections_qty; i++) {
-      printf("nome do mano no all connections: %a\n", broadcast_server->all_connections[i].nickname);
       send_message(broadcast_server->all_connections[i].socket_fd, message);
     }
 
@@ -297,7 +292,6 @@ void handle_user_text(Message *message, int client_socket) {
   }
 
   // Channel server transmission.
-  printf("aqui no channel\n");
   Channel user_channel = find_user_channel(message->sender_nickname, channel_server);
   if (!is_muted(client_socket, &user_channel)) {
     for (int i = 0; i < user_channel.members_qty; i++) {
@@ -416,7 +410,10 @@ void handle_admin_kick(Message *message, int client_socket) {
   printf("Successfully kicked user %s from channel %s!!!\n", message->content,
          target_channel.name);
 
+  add_user_to_all_connections(kicked_user, broadcast_server);
+  set_receiving_broadcast(kicked_user.socket_fd, true);
   send_response(NULL, KICK, NULL, kicked_user.socket_fd);
+
   send_response(NULL, KICK_SUCCEEDED, NULL, client_socket);
 
   pthread_mutex_unlock(&mutex);
@@ -672,12 +669,8 @@ void kick_user_from_channel(char *nickname, char *channel_name, Server *server) 
       int copy_index = 0;
 
       for (int j = 0; j < target_channel.members_qty; j++) {
-        if (strcmp(target_channel.members[j].nickname, nickname) != 0) {
+        if (strcmp(target_channel.members[j].nickname, nickname) != 0)
           updated_members[copy_index++] = target_channel.members[j];
-        } else {
-          add_user_to_all_connections(target_channel.members[j], broadcast_server);
-          set_receiving_broadcast(target_channel.members[j].socket_fd, true);
-        }
       }
 
       free(server->channels[i].members);
