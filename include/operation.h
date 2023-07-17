@@ -19,3 +19,5 @@ enum Operation {
   UNMUTE,
   WHOIS,
 } typedef Operation;
+
+Operation get_operation_from_command_string(char *command);
