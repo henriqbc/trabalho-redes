@@ -448,6 +448,15 @@ void handle_admin_whois(Message *message) {
   pthread_mutex_unlock(&mutex);
 }
 
+void handle_user_quit(Message *message) {
+  if (user_already_connected(message->sender_nickname, broadcast_server))
+    disconnect_user_from_broadcast_server(message->sender_nickname, broadcast_server);
+  else if (user_already_connected(message->sender_nickname, channel_server))
+    disconnect_user_from_broadcast_server(message->sender_nickname, channel_server);
+
+  printf("User %s just quit the server.\n", message->sender_nickname);
+}
+
 void handle_client_communication(int client_socket) {
   Message *message = receive_message(client_socket);
 
@@ -481,7 +490,7 @@ void handle_client_communication(int client_socket) {
         handle_admin_whois(message);
         break;
       case QUIT:
-        // TODO tem que implementar esse mano aqui tbm, o client manda quando ta saindo
+        handle_user_quit(message);
         break;
       default:
         printf("Unable to recognized given command.\n");
