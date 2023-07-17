@@ -185,6 +185,9 @@ STATUS handle_server_message(Message *message) {
     case KICK_SUCCEEDED:
       printf("\nSuccesfully kicked the user.\n\n");
       break;
+    case KICK_FAILED:
+      printf("\nFailed to kick the user.\n\n");
+      break;
     case USER_NOT_FOUND:
       printf("\nUser not found.\n\n");
       break;

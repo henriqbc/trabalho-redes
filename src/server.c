@@ -282,15 +282,22 @@ void handle_user_connect(Message *message, int client_socket) {
 void handle_user_text(Message *message, int client_socket) {
   pthread_mutex_lock(&mutex);
 
+  printf("oi\n");
+  printf("a mensagem que tem que mandar: (%s: %s)", message->sender_nickname, message->content);
+
   if (is_receiving_broadcast(client_socket)) {  // Broadcast server transmission.
-    for (int i = 0; i < broadcast_server->connections_qty; i++)
+    printf("aqui dentro do broadcast\n");
+    for (int i = 0; i < broadcast_server->connections_qty; i++) {
+      printf("nome do mano no all connections: %a\n", broadcast_server->all_connections[i].nickname);
       send_message(broadcast_server->all_connections[i].socket_fd, message);
+    }
 
     pthread_mutex_unlock(&mutex);
     return;
   }
 
   // Channel server transmission.
+  printf("aqui no channel\n");
   Channel user_channel = find_user_channel(message->sender_nickname, channel_server);
   if (!is_muted(client_socket, &user_channel)) {
     for (int i = 0; i < user_channel.members_qty; i++) {
@@ -324,6 +331,7 @@ void handle_user_join(Message *message, int client_socket) {
   }
 
   if (is_nickname_already_taken(message->sender_nickname, channel_server)) {
+    send_response(NULL, NICKNAME_ALREADY_TAKEN, NULL, client_socket);
     printf("Nickname is already taken.\n");
   } else {
     if (!channel_exists(message->content, channel_server)) {
@@ -375,6 +383,13 @@ void handle_user_nickname_update(Message *message, int client_socket) {
 }
 
 void handle_admin_kick(Message *message, int client_socket) {
+
+  if (strcmp(message->sender_nickname, message->content) == 0) {
+    printf("Users can't kick themselves.", message->content);
+    send_response(NULL, KICK_FAILED, NULL, client_socket);
+    return;
+  }
+
   pthread_mutex_lock(&mutex);
 
   Channel target_channel = find_user_channel(message->content, channel_server);
@@ -651,13 +666,14 @@ void kick_user_from_channel(char *nickname, char *channel_name, Server *server) 
       User *updated_members = malloc(sizeof(User) * (target_channel.members_qty - 1));
       int copy_index = 0;
 
-      printf("qtd de usuarios antes kickar: %d\n", server->channels[i].members_qty);
-
       for (int j = 0; j < target_channel.members_qty; j++) {
-        if (strcmp(target_channel.members[j].nickname, nickname) != 0)
+        if (strcmp(target_channel.members[j].nickname, nickname) != 0) {
           updated_members[copy_index++] = target_channel.members[j];
-        else
+        } else {
           send_response(NULL, KICK, NULL, target_channel.members[j].socket_fd);
+          add_user_to_all_connections(target_channel.members[j], broadcast_server);
+          set_receiving_broadcast(target_channel.members[j].socket_fd, true);
+        }
       }
 
       free(server->channels[i].members);

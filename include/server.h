@@ -35,7 +35,6 @@ Server *build_broadcast_server_config(User *all_connections, int connections_qty
 void create_channel(Channel channel, Server *server);
 void kill_channel(char *name, Server *server);
 
-void add_user_to_broadcast(User user, Server *server);
 void add_user_to_channel(User user, char *channel_name, Server *server);
 void move_user_through_channels(User user, char *current_channel_name, char *new_channel_name,
                                 Server *server);
