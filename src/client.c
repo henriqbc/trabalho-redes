@@ -1,4 +1,3 @@
-// https://stackoverflow.com/questions/6491019/struct-sigaction-incomplete-error
 #define _XOPEN_SOURCE 700
 
 #include <stdlib.h>
@@ -51,24 +50,30 @@ void run_client() {
   pthread_join(receive_message_thread, NULL);
 }
 
-void shutdown_client(int client_socket) {
-  shutdown(client_socket, SHUT_RDWR);
-  close(client_socket);
+void shutdown_client(int socket) {
+  server_socket = -1;
+  shutdown(socket, SHUT_RDWR);
+  close(socket);
 }
 
 void *send_message_loop() {
   while (client_running) {
     char *user_input = readString(stdin, "\n");
 
+    if (user_input == NULL) continue;
+
     char *command = substringUntil(user_input, " \n");
     char *command_arg = strlen(user_input) != strlen(command)
-                            ? substringUntil(user_input + strlen(command), "\n")
+                            ? substringUntil(user_input + strlen(command) + 1, "\n")
                             : NULL;
 
+    STATUS status;
     if (user_input[0] != '/')
-      handle_user_command(user_input, NULL);
+      status = handle_user_command(user_input, NULL);
     else
-      handle_user_command(command, command_arg);
+      status = handle_user_command(command, command_arg);
+
+    if (status == STATUS_INVALID_COMMAND) printf("'%s' is an invalid command.\n", command);
 
     free(user_input);
     free(command);
@@ -94,18 +99,7 @@ void *receive_message_loop() {
 }
 
 STATUS handle_user_command(char *command, char *command_arg) {
-  Operation operation;
-  if (strcmp(command, "/connect") == 0)       operation = CONNECT;
-  else if (strcmp(command, "/quit") == 0)     operation = QUIT;
-  else if (strcmp(command, "/ping") == 0)     operation = PING;
-  else if (strcmp(command, "/join") == 0)     operation = JOIN;
-  else if (strcmp(command, "/nickname") == 0) operation = NICKNAME;
-  else if (strcmp(command, "/kick") == 0)     operation = KICK;
-  else if (strcmp(command, "/mute") == 0)     operation = MUTE;
-  else if (strcmp(command, "/unmute") == 0)   operation = UNMUTE;
-  else if (strcmp(command, "/whois") == 0)    operation = WHOIS;
-  else if (command[0] == '/')                 operation = INVALID_OPERATION;
-  else return TEXT;
+  Operation operation = get_operation_from_command_string(command);
 
   if (operation == INVALID_OPERATION) return STATUS_INVALID_COMMAND;
 
@@ -113,26 +107,36 @@ STATUS handle_user_command(char *command, char *command_arg) {
       create_client_message_from_operation(operation, user_nickname, command, command_arg);
 
   if (operation == CONNECT) {
-    server_socket = connect_to_server();
-
-    if (server_socket == -1) {
-      printf("Error connecting to the server.\n");
+    if (server_socket != -1) {
+      printf("\nAlready connected to the server.\n\n");
       delete_message(request);
       return STATUS_ERROR;
     }
 
-    printf("Client succesfully connected and running.\n");
+    server_socket = connect_to_server();
 
+    if (server_socket == -1) {
+      printf("\nError connecting to the server.\n\n");
+      delete_message(request);
+      return STATUS_ERROR;
+    }
   } else if (operation == QUIT) {
+    if (server_socket != -1) send_message(server_socket, request);
+
     delete_message(request);
     quit();
+    return STATUS_SUCCESS;
+  } else if (operation == NICKNAME && server_socket == -1) {
+    update_user_nickname(request->content);
+    printf("\nSuccesfuly updated your nickname to %s!\n\n", request->content);
+    delete_message(request);
     return STATUS_SUCCESS;
   }
 
   if (server_socket != -1)
     send_message(server_socket, request);
   else
-    printf("You must first connect to the server using '/connect'.\n");
+    printf("\nYou must first connect to the server using '/connect'.\n\n");
 
   delete_message(request);
   return STATUS_SUCCESS;
@@ -141,6 +145,13 @@ STATUS handle_user_command(char *command, char *command_arg) {
 STATUS handle_server_message(Message *message) {
   switch (message->operation) {
     case TEXT:
+      // if the user sent a message, clear the message that he wrote
+      // and print instead the message that the server sent
+      if (strcmp(message->sender_nickname, user_nickname) == 0)
+        printf("\033[A\33[2K\r");  // clears the line the user sent
+
+      printf("\033[A\33[2K\r");  // clears the extra line after receiving
+
       printf("\n%s: %s\n\n", message->sender_nickname, message->content);
       break;
     case CONNECT:
@@ -163,11 +174,31 @@ STATUS handle_server_message(Message *message) {
       update_user_nickname(message->content);
       printf("\nThe nickname is currently unavailable, please choose another one.\n\n");
       break;
+    case NICKNAME_ALREADY_TAKEN_CONNECT:
+      update_user_nickname(message->content);
+      printf("\nThe nickname is currently unavailable, please choose another one.\n\n");
+      shutdown_client(server_socket);
+      break;
     case KICK:
-      printf("\nUnfortunately, you were kicked from this channel by the administrator.\n\n");
+      printf("Unfortunately, you were kicked from this channel by the administrator.\n\n");
+      break;
+    case KICK_SUCCEEDED:
+      printf("\nSuccesfully kicked the user.\n\n");
+      break;
+    case KICK_FAILED:
+      printf("\nFailed to kick the user.\n\n");
+      break;
+    case USER_NOT_FOUND:
+      printf("\nUser not found.\n\n");
       break;
     case WHOIS:
       printf("\nThe desired ip is: %s\n\n.", message->content);
+      break;
+    case UNAUTHORIZED:
+      printf("\nYou must be an admin to use this command.\n\n");
+      break;
+    case SERVER_RESPONSE:
+      printf("\n%s\n\n", message->content);
       break;
     default:
       return STATUS_ERROR;
@@ -207,8 +238,7 @@ void quit() {
 
   free(user_nickname);
 
-  if (server_socket != -1)
-    shutdown_client(server_socket);
+  if (server_socket != -1) shutdown_client(server_socket);
 }
 
 void print_greetings_message() {
@@ -220,9 +250,7 @@ void print_greetings_message() {
   printf("\n");
 }
 
-void sigint_handler() {
-  printf("\nTo exit the application, use '/quit'.\n\n");
-}
+void sigint_handler() { printf("\nTo exit the application, use '/quit'.\n\n"); }
 
 void define_sigint_handler() {
   struct sigaction act;
