@@ -305,14 +305,29 @@ void handle_user_text(Message *message, int client_socket) {
 void handle_user_join(Message *message, int client_socket) {
   pthread_mutex_lock(&mutex);
 
+  printf("to adicionando o %s no %s\n", message->sender_nickname, message->content);
+
   if (user_already_connected(message->sender_nickname, broadcast_server)) {
+    printf("usuario ja ta conectado no broadcast\n");
     disconnect_user_from_broadcast_server(message->sender_nickname, broadcast_server);
   }
 
   if (user_already_connected(message->sender_nickname, channel_server)) {
+    printf("usuario ja ta conectado em um channel\n");
+    if (!channel_exists(message->content, channel_server)) {
+      char *new_channel_name = malloc(MAX_PACKET_SIZE * sizeof(char));
+      strcpy(new_channel_name, message->content);
+      Channel new_channel =
+          (Channel){.name = new_channel_name, .members = NULL, .members_qty = 0};
+
+      create_channel(new_channel, channel_server);
+    }
+
     Channel user_current_channel = find_user_channel(message->sender_nickname, channel_server);
+
     for (int i = 0; i < user_current_channel.members_qty; i++) {
       if (strcmp(user_current_channel.members[i].nickname, message->sender_nickname) == 0) {
+        printf("movendo\n");
         User user = user_current_channel.members[i];
         move_user_through_channels(user, user_current_channel.name, message->content,
                                    channel_server);
@@ -329,6 +344,7 @@ void handle_user_join(Message *message, int client_socket) {
     printf("Nickname is already taken.\n");
   } else {
     if (!channel_exists(message->content, channel_server)) {
+      printf("criando canal novo\n");
       char *new_channel_name = malloc(MAX_PACKET_SIZE * sizeof(char));
       strcpy(new_channel_name, message->content);
       Channel new_channel =
@@ -343,6 +359,7 @@ void handle_user_join(Message *message, int client_socket) {
                            .ip = get_ip_str_from_sockaddr(client_addr),
                            .muted = false};
 
+    printf("adicionando auqi quando ta no broadcast\n");
     add_user_to_channel(new_user, message->content, channel_server);
     add_user_to_all_connections(new_user, channel_server);
     printf("User %s successfully connected to %s channel in the channel-oriented server!\n",
@@ -661,7 +678,14 @@ void kick_user_from_broadcast(char *nickname, Server *server) {
 
 void kick_user_from_channel(char *nickname, char *channel_name, Server *server) {
 
+  // remove user from all connections as well
+  User *updated_all_connections = malloc(sizeof(User) * (server->connections_qty - 1));
+  int connections_copy_index = 0;
+
   for (int i = 0; i < server->channels_qty; i++) {
+    if (strcmp(server->all_connections[i].nickname, nickname) != 0)
+      updated_all_connections[connections_copy_index++] = server->all_connections[i];
+
     if (strcmp(server->channels[i].name, channel_name) == 0) {
 
       Channel target_channel = server->channels[i];
@@ -678,6 +702,10 @@ void kick_user_from_channel(char *nickname, char *channel_name, Server *server) 
       server->channels[i].members_qty--;
     }
   }
+
+  free(server->all_connections);
+  server->all_connections = updated_all_connections;
+  server->connections_qty--;
 }
 
 void create_channel(Channel channel, Server *server) {
@@ -709,8 +737,9 @@ bool is_nickname_already_taken(char *nickname, Server *server) {
 }
 
 bool channel_exists(char *channel_name, Server *server) {
-  for (int i = 0; i < server->connections_qty; i++)
+  for (int i = 0; i < server->channels_qty; i++)
     if (strcmp(server->channels[i].name, channel_name) == 0) return true;
+
   return false;
 }
 
