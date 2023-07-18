@@ -194,6 +194,9 @@ STATUS handle_server_message(Message *message) {
     case UNAUTHORIZED:
       printf("\nYou must be an admin to use this command.\n\n");
       break;
+    case SERVER_RESPONSE:
+      printf("\n%s\n\n", message->content);
+      break;
     default:
       return STATUS_ERROR;
   }

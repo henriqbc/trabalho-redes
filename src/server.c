@@ -95,7 +95,7 @@ int create_server() {
 }
 
 void signal_callback_handler() {
-  printf("\nShutting down server.\n");
+  printf("\nShutting down server.");
   shutdown_server(server_socket_id);
   delete_server_config(broadcast_server);
   delete_server_config(channel_server);
@@ -365,9 +365,11 @@ void handle_user_nickname_update(Message *message, int client_socket) {
                             channel_server);
   }
 
-  // TODO por enquanto ta mandando só NICKNAME sempre,
-  // mas se o nickname ja existir tem que mandar NICKNAME_ALREADY_TAKEN e o nick antigo
-  send_response(NULL, NICKNAME, message->content, client_socket);
+  Server *user_server =
+      is_receiving_broadcast(client_socket) ? broadcast_server : channel_server;
+  if (is_nickname_already_taken(message->content, user_server)) {
+    send_response(NULL, NICKNAME_ALREADY_TAKEN, message->sender_nickname, client_socket);
+  }
 
   printf("Successfully renamed user %s to %s!\n", message->sender_nickname, message->content);
 
@@ -380,7 +382,7 @@ void handle_admin_kick(Message *message, int client_socket) {
   Channel target_channel = find_user_channel(message->content, channel_server);
 
   if (target_channel.name == NULL) {
-    printf("User %s doesn't exist.", message->content);
+    printf("User %s doesn't exist.\n", message->content);
     send_response(NULL, USER_NOT_FOUND, NULL, client_socket);
     pthread_mutex_unlock(&mutex);
     return;
@@ -394,7 +396,7 @@ void handle_admin_kick(Message *message, int client_socket) {
   }
 
   kick_user_from_channel(message->content, target_channel.name, channel_server);
-  printf("Successfully kicked user %s from channel %s!!!\n", message->content,
+  printf("Successfully kicked user %s from channel %s!\n", message->content,
          target_channel.name);
 
   send_response(NULL, KICK_SUCCEEDED, NULL, client_socket);
@@ -402,56 +404,103 @@ void handle_admin_kick(Message *message, int client_socket) {
   pthread_mutex_unlock(&mutex);
 }
 
-void handle_admin_mute(Message *message) {
-  pthread_mutex_lock(&mutex);
-
-  Channel target_channel = find_user_channel(message->content, channel_server);
-  if (!is_user_an_admin(message->sender_nickname, target_channel.name, channel_server)) {
-    printf("User unauthorized to perform this command.\n");
-    return;
-  }
-
-  mute_user(message->content, target_channel.name, channel_server);
-
-  pthread_mutex_unlock(&mutex);
-}
-
-void handle_admin_unmute(Message *message) {
-  pthread_mutex_lock(&mutex);
-
-  Channel target_channel = find_user_channel(message->content, channel_server);
-  if (!is_user_an_admin(message->sender_nickname, target_channel.name, channel_server)) {
-    printf("User unauthorized to perform this command.\n");
-    return;
-  }
-
-  unmute_user(message->content, target_channel.name, channel_server);
-
-  pthread_mutex_unlock(&mutex);
-}
-
-void handle_admin_whois(Message *message) {
+void handle_admin_mute(Message *message, int client_socket) {
   pthread_mutex_lock(&mutex);
 
   Channel target_channel = find_user_channel(message->content, channel_server);
   if (target_channel.name == NULL) {
-    printf("Provided nickname \"%s\" is not currently connected!\n", message->content);
+    char *error_message = malloc(MAX_PACKET_SIZE * sizeof(char));
+    sprintf(error_message, "Provided nickname \"%s\" is not currently connected!",
+            message->content);
+    send_response(NULL, SERVER_RESPONSE, error_message, client_socket);
 
     pthread_mutex_unlock(&mutex);
     return;
   }
 
   if (!is_user_an_admin(message->sender_nickname, target_channel.name, channel_server)) {
-    printf("User unauthorized to perform this command.\n");
+    char *error_message = malloc(MAX_PACKET_SIZE * sizeof(char));
+    sprintf(error_message, "User unauthorized to perform this command.");
+    send_response(NULL, SERVER_RESPONSE, error_message, client_socket);
+
+    pthread_mutex_unlock(&mutex);
+    return;
+  }
+
+  mute_user(message->content, target_channel.name, channel_server);
+
+  char *response = malloc(MAX_PACKET_SIZE * sizeof(char));
+  sprintf(response, "User %s has been muted.", message->content);
+  send_response(NULL, SERVER_RESPONSE, response, client_socket);
+
+  pthread_mutex_unlock(&mutex);
+}
+
+void handle_admin_unmute(Message *message, int client_socket) {
+  pthread_mutex_lock(&mutex);
+
+  Channel target_channel = find_user_channel(message->content, channel_server);
+  if (target_channel.name == NULL) {
+    char *error_message = malloc(MAX_PACKET_SIZE * sizeof(char));
+    sprintf(error_message, "Provided nickname \"%s\" is not currently connected!",
+            message->content);
+    send_response(NULL, SERVER_RESPONSE, error_message, client_socket);
+
+    pthread_mutex_unlock(&mutex);
+    return;
+  }
+
+  if (!is_user_an_admin(message->sender_nickname, target_channel.name, channel_server)) {
+    char *error_message = malloc(MAX_PACKET_SIZE * sizeof(char));
+    sprintf(error_message, "User unauthorized to perform this command.");
+    send_response(NULL, SERVER_RESPONSE, error_message, client_socket);
+
+    pthread_mutex_unlock(&mutex);
+    return;
+  }
+
+  unmute_user(message->content, target_channel.name, channel_server);
+
+  char *response = malloc(MAX_PACKET_SIZE * sizeof(char));
+  sprintf(response, "User %s has been unmuted.", message->content);
+  send_response(NULL, SERVER_RESPONSE, response, client_socket);
+
+  pthread_mutex_unlock(&mutex);
+}
+
+void handle_admin_whois(Message *message, int client_socket) {
+  pthread_mutex_lock(&mutex);
+
+  Channel target_channel = find_user_channel(message->content, channel_server);
+  if (target_channel.name == NULL) {
+    char *error_message = malloc(MAX_PACKET_SIZE * sizeof(char));
+    sprintf(error_message, "Provided nickname \"%s\" is not currently connected!",
+            message->content);
+    send_response(NULL, SERVER_RESPONSE, error_message, client_socket);
+
+    pthread_mutex_unlock(&mutex);
+    return;
+  }
+
+  if (!is_user_an_admin(message->sender_nickname, target_channel.name, channel_server)) {
+    char *error_message = malloc(MAX_PACKET_SIZE * sizeof(char));
+    sprintf(error_message, "User unauthorized to perform this command.\n");
+    send_response(NULL, SERVER_RESPONSE, error_message, client_socket);
+
+    pthread_mutex_unlock(&mutex);
     return;
   }
 
   char *target_ip = whois_nickname(message->content, target_channel.name, channel_server);
-  if (target_ip != NULL)
-    printf("%s's IP is %s!\n", message->content, target_ip);
-  else
-    printf("Provided nickname \"%s\" is not currently connected to this channel!\n",
-           message->content);
+  char *response = malloc(MAX_PACKET_SIZE * sizeof(char));
+  if (target_ip != NULL) {
+    sprintf(response, "%s's IP is %s!", message->content, target_ip);
+  } else {
+    sprintf(response, "Provided nickname \"%s\" is not currently connected to this channel!",
+            message->content);
+  }
+
+  send_response(NULL, SERVER_RESPONSE, response, client_socket);
 
   pthread_mutex_unlock(&mutex);
 }
@@ -489,13 +538,13 @@ void handle_client_communication(int client_socket) {
         handle_admin_kick(message, client_socket);
         break;
       case MUTE:
-        handle_admin_mute(message);
+        handle_admin_mute(message, client_socket);
         break;
       case UNMUTE:
-        handle_admin_unmute(message);
+        handle_admin_unmute(message, client_socket);
         break;
       case WHOIS:
-        handle_admin_whois(message);
+        handle_admin_whois(message, client_socket);
         break;
       case QUIT:
         handle_user_quit(message);
@@ -560,7 +609,7 @@ void start_server(int server_socket) {
     // Create a new thread to handle client communication
     pthread_t client_thread;
     if (pthread_create(&client_thread, NULL, handle_client_communication, client_socket) < 0) {
-      printf("Error creating thread to handle new client.");
+      printf("Error creating thread to handle new client.\n");
       shutdown_client(client_socket);
       continue;
     }
@@ -651,8 +700,6 @@ void kick_user_from_channel(char *nickname, char *channel_name, Server *server) 
       User *updated_members = malloc(sizeof(User) * (target_channel.members_qty - 1));
       int copy_index = 0;
 
-      printf("qtd de usuarios antes kickar: %d\n", server->channels[i].members_qty);
-
       for (int j = 0; j < target_channel.members_qty; j++) {
         if (strcmp(target_channel.members[j].nickname, nickname) != 0)
           updated_members[copy_index++] = target_channel.members[j];
@@ -732,18 +779,17 @@ void move_user_through_channels(User user, char *current_channel_name, char *new
 }
 
 void mute_user(char *nickname, char *channel_name, Server *server) {
+  char *response = malloc(MAX_PACKET_SIZE * sizeof(char));
+
   for (int i = 0; i < server->channels_qty; i++) {
     if (strcmp(server->channels[i].name, channel_name) == 0)
       for (int j = 0; j < server->channels[i].members_qty; j++) {
         if (strcmp(server->channels[i].members[j].nickname, nickname) == 0) {
           server->channels[i].members[j].muted = true;
-          printf("Successfully muted user %s from channel %s!\n", nickname, channel_name);
-          return;
+          break;
         }
       }
   }
-
-  printf("Unable to mute user %s. Error: not found.\n", nickname);
 }
 
 void unmute_user(char *nickname, char *channel_name, Server *server) {
@@ -752,7 +798,6 @@ void unmute_user(char *nickname, char *channel_name, Server *server) {
       for (int j = 0; j < server->channels[i].members_qty; j++) {
         if (strcmp(server->channels[i].members[j].nickname, nickname) == 0) {
           server->channels[i].members[j].muted = false;
-          printf("Successfully unmuted user %s from channel %s!\n", nickname, channel_name);
           return;
         }
       }

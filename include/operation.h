@@ -22,6 +22,7 @@ enum Operation {
   MUTE,
   UNMUTE,
   WHOIS,
+  SERVER_RESPONSE
 } typedef Operation;
 
 Operation get_operation_from_command_string(char *command);
