@@ -39,4 +39,4 @@ O servidor roda no host `127.0.0.1` (o `localhost`), e sua porta é a `3000`. Pa
 
 Um vídeo foi gravado com o objetivo de apresentar as funcionalidades do programa e explicar seus principais pontos.
 
-**[Link do vídeo.](https://sla.com)**
+**[Link do vídeo.](https://drive.google.com/file/d/1Tb_WbOAj_tSUUEJfei95to8fstoVWxTu/view?usp=sharing)**
